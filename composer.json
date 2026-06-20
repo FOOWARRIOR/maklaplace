@@ -1,0 +1,19 @@
+{
+  "name": "yazid-bouzifi/maklaplace",
+  "description": "MaklaPlace WordPress plugin foundation.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Yazid Bouzifi"
+    }
+  ],
+  "require": {
+    "php": ">=8.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "MaklaPlace\\": "includes/"
+    }
+  }
+}
