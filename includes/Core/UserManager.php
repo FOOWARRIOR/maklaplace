@@ -74,13 +74,13 @@ final class UserManager {
 	private function register_roles() : void {
 		add_role(
 			'maklaplace_chef',
-			__( 'Chef', 'maklaplace' ),
+			'Chef',
 			array_fill_keys( $this->capabilities->chef(), true )
 		);
 
 		add_role(
 			'maklaplace_customer',
-			__( 'Customer', 'maklaplace' ),
+			'Customer',
 			array_fill_keys( $this->capabilities->customer(), true )
 		);
 	}

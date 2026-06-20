@@ -81,6 +81,11 @@ Each module should be independent and easily extensible.
    - Visit local site: http://01.local
    - Admin dashboard: http://01.local/wp-admin
    - Check the WordPress debug log at C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
+   - After every PHP file update, deactivate and reactivate the plugin, then inspect debug.log for new errors before continuing.
+
+8. **Problem Solving**:
+   - If you hit a problem, uncertainty, hesitation, or conflicting instruction, stop and re-read this `agents.md` file before making the next change.
+   - Treat `agents.md` as the current source of truth for workflow decisions in this workspace.
 
 ## Deployment
 - Ensure plugin works with PHP 8.2+ (tested with 8.2.29)
@@ -92,6 +97,8 @@ Each module should be independent and easily extensible.
 - For path issues, use short 8.3 names or quote paths with spaces
 - When running commands from different shells, ensure you reference the correct PHP binary
 - Check the WordPress debug log at C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
+- After every PHP file change, deactivate and reactivate the plugin, then verify the debug log for any newly introduced errors.
+- If you are unsure how to proceed, re-open this `agents.md` file immediately before continuing.
 - **PHP Extension Loading Issues**: If you see "Access is denied" errors when loading PHP extensions, check your php.ini extension_dir setting. The default php.ini points to an inaccessible directory. Use the workspace php.ini with correct extension_dir:
   extension_dir="C:/Program Files (x86)/Local/resources/extraResources/lightning-services/php-8.2.29+0/bin/win64/ext"
 
@@ -144,6 +151,13 @@ Each module should be independent and easily extensible.
 - Optimize for scalability from the beginning.
 - Favor extensibility over quick fixes.
 - Reuse WordPress APIs whenever practical instead of reinventing existing functionality.
+
+## Mandatory Checklist
+- Re-read this `agents.md` immediately if you hit a problem, hesitation, uncertainty, or conflicting instruction.
+- After every PHP file update, deactivate and reactivate the plugin.
+- After every PHP file update, check `C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log` for new errors before continuing.
+- After every PHP file update, fix any PHP errors and PHP notices before continuing.
+- Do not continue until any new errors or notices introduced by the change are understood and fixed.
 
 ---
 *Generated for coding agents to streamline WordPress plugin development in this specific environment.*

@@ -16,8 +16,11 @@ use MaklaPlace\Modules\OrdersModule;
 use MaklaPlace\Modules\WalletModule;
 use MaklaPlace\Modules\NotificationModule;
 use MaklaPlace\Modules\UserModule;
-
 use MaklaPlace\Admin\AdminModule;
+use MaklaPlace\Admin\AdminModule;
+use MaklaPlace\Admin\AdminModule;
+use MaklaPlace\Admin\AdminModule;
+use MaklaPlace\Admin\AdminModule;`nuse MaklaPlace\Admin\AdminModule;
 
 defined( 'ABSPATH' ) || exit;
 
