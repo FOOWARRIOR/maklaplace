@@ -391,7 +391,7 @@ final class OrderService {
 	 *
 	 * @return array<int, array<string, mixed>>
 	 */
-	public function get_order_store() : array {
+	private function get_order_store() : array {
 		$items = get_option( 'maklaplace_orders', array() );
 		return is_array( $items ) ? $items : array();
 	}
