@@ -40,23 +40,23 @@ class AdminModule extends Module {
 		add_menu_page(
 			__( 'MaklaPlace', 'maklaplace' ),
 			__( 'MaklaPlace', 'maklaplace' ),
-			'manage_options',
+			'read',
 			'maklaplace',
 			array( $this, 'dashboard_page' ),
 			'dashicons-cart',
 			6
 		);
 
-		add_submenu_page( 'maklaplace', __( 'Dashboard', 'maklaplace' ), __( 'Dashboard', 'maklaplace' ), 'manage_options', 'maklaplace', array( $this, 'dashboard_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Orders', 'maklaplace' ), __( 'Orders', 'maklaplace' ), 'manage_options', 'maklaplace-orders', array( $this, 'orders_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Chefs', 'maklaplace' ), __( 'Chefs', 'maklaplace' ), 'manage_options', 'maklaplace-chefs', array( $this, 'chefs_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Customers', 'maklaplace' ), __( 'Customers', 'maklaplace' ), 'manage_options', 'maklaplace-customers', array( $this, 'customers_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Menus', 'maklaplace' ), __( 'Menus', 'maklaplace' ), 'manage_options', 'maklaplace-menus', array( $this, 'menus_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Wallets', 'maklaplace' ), __( 'Wallets', 'maklaplace' ), 'manage_options', 'maklaplace-wallets', array( $this, 'wallets_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Notifications', 'maklaplace' ), __( 'Notifications', 'maklaplace' ), 'manage_options', 'maklaplace-notifications', array( $this, 'notifications_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Analytics', 'maklaplace' ), __( 'Analytics', 'maklaplace' ), 'manage_options', 'maklaplace-analytics', array( $this, 'analytics_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Settings', 'maklaplace' ), __( 'Settings', 'maklaplace' ), 'manage_options', 'maklaplace-settings', array( $this, 'settings_page' ) );
-		add_submenu_page( 'maklaplace', __( 'Tools', 'maklaplace' ), __( 'Tools', 'maklaplace' ), 'manage_options', 'maklaplace-tools', array( $this, 'tools_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Dashboard', 'maklaplace' ), __( 'Dashboard', 'maklaplace' ), 'read', 'maklaplace', array( $this, 'dashboard_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Orders', 'maklaplace' ), __( 'Orders', 'maklaplace' ), 'read', 'maklaplace-orders', array( $this, 'orders_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Chefs', 'maklaplace' ), __( 'Chefs', 'maklaplace' ), 'read', 'maklaplace-chefs', array( $this, 'chefs_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Customers', 'maklaplace' ), __( 'Customers', 'maklaplace' ), 'read', 'maklaplace-customers', array( $this, 'customers_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Menus', 'maklaplace' ), __( 'Menus', 'maklaplace' ), 'read', 'maklaplace-menus', array( $this, 'menus_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Wallets', 'maklaplace' ), __( 'Wallets', 'maklaplace' ), 'read', 'maklaplace-wallets', array( $this, 'wallets_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Notifications', 'maklaplace' ), __( 'Notifications', 'maklaplace' ), 'read', 'maklaplace-notifications', array( $this, 'notifications_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Analytics', 'maklaplace' ), __( 'Analytics', 'maklaplace' ), 'read', 'maklaplace-analytics', array( $this, 'analytics_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Settings', 'maklaplace' ), __( 'Settings', 'maklaplace' ), 'read', 'maklaplace-settings', array( $this, 'settings_page' ) );
+		add_submenu_page( 'maklaplace', __( 'Tools', 'maklaplace' ), __( 'Tools', 'maklaplace' ), 'read', 'maklaplace-tools', array( $this, 'tools_page' ) );
 	}
 
 	/**

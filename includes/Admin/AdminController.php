@@ -132,7 +132,6 @@ final class AdminController {
 	public function settings_page() : void {
 		$this->render_header( __( 'Settings', 'maklaplace' ) );
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-		settings_fields( 'maklaplace_settings_group' );
 		wp_nonce_field( 'maklaplace_save_settings', 'maklaplace_settings_nonce' );
 		echo '<input type="hidden" name="action" value="maklaplace_save_settings" />';
 		$this->render_settings_sections();
@@ -197,7 +196,8 @@ final class AdminController {
 		}
 
 		check_admin_referer( 'maklaplace_save_settings', 'maklaplace_settings_nonce' );
-		$this->sanitize_settings( (array) wp_unslash( $_POST[ self::SETTINGS_OPTION ] ?? array() ) );
+		$sanitized = $this->sanitize_settings( (array) wp_unslash( $_POST[ self::SETTINGS_OPTION ] ?? array() ) );
+		update_option( self::SETTINGS_OPTION, $sanitized, false );
 		wp_safe_redirect( admin_url( 'admin.php?page=maklaplace-settings&updated=1' ) );
 		exit;
 	}
@@ -212,7 +212,6 @@ final class AdminController {
 		$settings['orders']['default_status'] = sanitize_key( (string) ( $settings['orders']['default_status'] ?? 'pending' ) );
 		$settings['notifications']['email'] = ! empty( $settings['notifications']['email'] ) ? 1 : 0;
 		$settings['notifications']['in_app'] = ! empty( $settings['notifications']['in_app'] ) ? 1 : 0;
-		update_option( self::SETTINGS_OPTION, $settings, false );
 		return $settings;
 	}
 
@@ -242,14 +241,18 @@ final class AdminController {
 		$pending = 0;
 		$ready = 0;
 		$active_customers = 0;
-		foreach ( get_users( array( 'fields' => array( 'ID', 'roles', 'user_registered' ) ) ) as $user ) {
-			if ( in_array( 'maklaplace_customer', (array) $user->roles, true ) ) {
+		foreach ( get_users( array( 'fields' => 'all' ) ) as $user ) {
+			$roles = $user instanceof \WP_User ? (array) $user->roles : array();
+
+			if ( in_array( 'maklaplace_customer', $roles, true ) ) {
 				$active_customers++;
 			}
-			if ( in_array( 'maklaplace_chef', (array) $user->roles, true ) && 'pending' === $chef_service->get_status( (int) $user->ID ) ) {
+
+			if ( in_array( 'maklaplace_chef', $roles, true ) && 'pending' === $chef_service->get_status( (int) $user->ID ) ) {
 				$pending++;
 			}
-			if ( in_array( 'maklaplace_chef', (array) $user->roles, true ) && 'ready_to_collect' === $wallet_service->get_status( (int) $user->ID ) ) {
+
+			if ( in_array( 'maklaplace_chef', $roles, true ) && 'ready_to_collect' === $wallet_service->get_status( (int) $user->ID ) ) {
 				$ready++;
 			}
 		}
@@ -316,13 +319,6 @@ final class AdminController {
 		echo '<h2>' . esc_html__( 'Notifications', 'maklaplace' ) . '</h2>';
 		$this->checkbox_row( 'email', __( 'Enable Email', 'maklaplace' ), ! empty( $settings['notifications']['email'] ) );
 		$this->checkbox_row( 'in_app', __( 'Enable In-App Notifications', 'maklaplace' ), ! empty( $settings['notifications']['in_app'] ) );
-		echo '<input type="hidden" name="' . esc_attr( self::SETTINGS_OPTION ) . '[general][platform_name]" value="' . esc_attr( $settings['general']['platform_name'] ) . '" />';
-		echo '<input type="hidden" name="' . esc_attr( self::SETTINGS_OPTION ) . '[general][currency]" value="' . esc_attr( $settings['general']['currency'] ) . '" />';
-		echo '<input type="hidden" name="' . esc_attr( self::SETTINGS_OPTION ) . '[general][commission_percentage]" value="' . esc_attr( $settings['general']['commission_percentage'] ) . '" />';
-		echo '<input type="hidden" name="' . esc_attr( self::SETTINGS_OPTION ) . '[wallet][collection_threshold]" value="' . esc_attr( $settings['wallet']['collection_threshold'] ) . '" />';
-		echo '<input type="hidden" name="' . esc_attr( self::SETTINGS_OPTION ) . '[orders][default_status]" value="' . esc_attr( $settings['orders']['default_status'] ) . '" />';
-		echo '<input type="hidden" name="' . esc_attr( self::SETTINGS_OPTION ) . '[notifications][email]" value="0" />';
-		echo '<input type="hidden" name="' . esc_attr( self::SETTINGS_OPTION ) . '[notifications][in_app]" value="0" />';
 	}
 
 	private function input_row( string $section, string $field, string $label, mixed $value, string $type = 'text', string $min = '' ) : void {
@@ -330,6 +326,9 @@ final class AdminController {
 		echo '<input type="' . esc_attr( $type ) . '" name="' . esc_attr( self::SETTINGS_OPTION . '[' . $section . '][' . $field . ']' ) . '" value="' . esc_attr( (string) $value ) . '"';
 		if ( '' !== $min ) {
 			echo ' min="' . esc_attr( $min ) . '"';
+		}
+		if ( 'number' === $type ) {
+			echo ' step="any"';
 		}
 		echo ' class="regular-text" /></label></p>';
 	}
