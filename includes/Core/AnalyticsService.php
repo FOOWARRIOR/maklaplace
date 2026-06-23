@@ -145,6 +145,16 @@ final class AnalyticsService {
 	}
 
 	/**
+	 * Get stored analytics events.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_events() : array {
+		$events = get_option( AnalyticsKeys::EVENTS_OPTION, array() );
+		return is_array( $events ) ? array_values( $events ) : array();
+	}
+
+	/**
 	 * Build a chef stat payload.
 	 *
 	 * @param int                  $chef_user_id Chef user ID.

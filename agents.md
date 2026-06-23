@@ -31,16 +31,15 @@ Each module should be independent and easily extensible.
 - OS: Windows 11
 - PHP binary: C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe
 - PHP version: 8.2.29
-- php.ini used: C:\Users\Yazid\php.ini (see note below for workspace workaround)
+- php.ini used: C:\Users\HMstore\Documents\Codex\php.ini
 - WP_CLI phar path: phar://C:/wp-cli/wp-cli.phar
 - WP-CLI version: 2.12.0
-- WordPress folder: C:\Users\Yazid\Local Sites\01\app\public\
+- WordPress folder: C:\Users\HMstore\Local Sites\01\app\public\
 - Site URL: http://01.local
 
-> **NOTE ABOUT PHP.INI**: The default php.ini at C:\Users\Yazid\php.ini has an incorrect extension_dir setting.
-> It points to an inaccessible directory: C:\Users\Yazid\AppData\Roaming\Local\lightning-services\php-8.2.29+0\bin\win64\ext
+> **NOTE ABOUT PHP.INI**:
 > To use PHP and WP-CLI correctly, use the workspace-specific php.ini:
-> C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini
+> C:\Users\HMstore\Documents\Codex\php.ini
 > All PHP and WP-CLI commands should include the -c flag pointing to this file.
 
 ## Development Workflow
@@ -52,35 +51,35 @@ Each module should be independent and easily extensible.
 2. **Run WP-CLI commands** 
    using the wrapper batch file:
    powershell
-   & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\Yazid\Local Sites\01\app\public" <command>
+   & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\HMstore\Documents\Codex\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\HMstore\Local Sites\01\app\public" <command>
    
 
 3. **Run PHP commands**:
    powershell
-   & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini" <command>
+   & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\HMstore\Documents\Codex\php.ini" <command>
    
 
 4. **Plugin directory**:
    
-   C:\Users\Yazid\Local Sites\01\app\public\wp-content\plugins\maklaplace\
+   C:\Users\HMstore\Local Sites\01\app\public\wp-content\plugins\maklaplace\
    
 
 5. **Common WP-CLI commands**:
-   - List plugins: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\Yazid\Local Sites\01\app\public" plugin list
-   - Activate plugin: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\Yazid\Local Sites\01\app\public" plugin activate <slug>
-   - Deactivate plugin: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\Yazid\Local Sites\01\app\public" plugin deactivate <slug>
-   - Update plugin: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\Yazid\Local Sites\01\app\public" plugin update <slug>
-   - Install plugin: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\Yazid\Local Sites\01\app\public" plugin install <slug-or-zip>
+   - List plugins: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\HMstore\Documents\Codex\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\HMstore\Local Sites\01\app\public" plugin list
+   - Activate plugin: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\HMstore\Documents\Codex\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\HMstore\Local Sites\01\app\public" plugin activate <slug>
+   - Deactivate plugin: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\HMstore\Documents\Codex\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\HMstore\Local Sites\01\app\public" plugin deactivate <slug>
+   - Update plugin: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\HMstore\Documents\Codex\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\HMstore\Local Sites\01\app\public" plugin update <slug>
+   - Install plugin: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\HMstore\Documents\Codex\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\HMstore\Local Sites\01\app\public" plugin install <slug-or-zip>
 
 6. **Debugging**:
    - Enable WP_DEBUG in wp-config.php for development
-   - Check the WordPress debug log at C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
-   - Use WP-CLI with custom php.ini: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\Yazid\Local Sites\01\app\public" scaffold <command>
+   - Check the WordPress debug log at C:\Users\HMstore\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
+   - Use WP-CLI with custom php.ini: & "C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe" -c "C:\Users\HMstore\Documents\Codex\php.ini" "C:\Program Files (x86)\Local\resources\extraResources\bin\wp-cli\wp-cli.phar" --path="C:\Users\HMstore\Local Sites\01\app\public" scaffold <command>
 
 7. **Testing**:
    - Visit local site: http://01.local
    - Admin dashboard: http://01.local/wp-admin
-   - Check the WordPress debug log at C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
+   - Check the WordPress debug log at C:\Users\HMstore\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
    - After every PHP file update, deactivate and reactivate the plugin, then inspect debug.log for new errors before continuing.
 
 8. **Problem Solving**:
@@ -90,25 +89,23 @@ Each module should be independent and easily extensible.
 ## Deployment
 - Ensure plugin works with PHP 8.2+ (tested with 8.2.29)
 - Check compatibility with latest WordPress version
-- Check the WordPress debug log at C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
+- Check the WordPress debug log at C:\Users\HMstore\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
 
 ## Troubleshooting
 - If WP-CLI reports errors, Don't finish until you fix the error
 - For path issues, use short 8.3 names or quote paths with spaces
 - When running commands from different shells, ensure you reference the correct PHP binary
-- Check the WordPress debug log at C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
+- Check the WordPress debug log at C:\Users\HMstore\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
 - After every PHP file change, deactivate and reactivate the plugin, then verify the debug log for any newly introduced errors.
 - If you are unsure how to proceed, re-open this `agents.md` file immediately before continuing.
-- **PHP Extension Loading Issues**: If you see "Access is denied" errors when loading PHP extensions, check your php.ini extension_dir setting. The default php.ini points to an inaccessible directory. Use the workspace php.ini with correct extension_dir:
-  extension_dir="C:/Program Files (x86)/Local/resources/extraResources/lightning-services/php-8.2.29+0/bin/win64/ext"
 
 ## Rules:
 - Never modify WordPress core.
 - Never modify themes.
 - Never modify other plugins.
 - Only edit files in this workspace.
-- Validate all changed PHP files with .'C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe' -c 'C:\Users\Yazid\Documents\Codex\2026-06-19\to-streamline-wordpress-development-you-must-3\php_override\php.ini' -l.
-- Check the WordPress debug log at C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
+- Validate all changed PHP files with .'C:\Program Files (x86)\Local\resources\extraResources\lightning-services\php-8.2.29+0\bin\win64\php.exe' -c 'C:\Users\HMstore\Documents\Codex\php.ini' -l.
+- Check the WordPress debug log at C:\Users\HMstore\Local Sites\01\app\public\wp-content\debug.log and fix errors periodically.
 
 ## Security:
 - WordPress coding standards
@@ -155,7 +152,7 @@ Each module should be independent and easily extensible.
 ## Mandatory Checklist
 - Re-read this `agents.md` immediately if you hit a problem, hesitation, uncertainty, or conflicting instruction.
 - After every PHP file update, deactivate and reactivate the plugin.
-- After every PHP file update, check `C:\Users\Yazid\Local Sites\01\app\public\wp-content\debug.log` for new errors before continuing.
+- After every PHP file update, check `C:\Users\HMstore\Local Sites\01\app\public\wp-content\debug.log` for new errors before continuing.
 - After every PHP file update, fix any PHP errors and PHP notices before continuing.
 - Do not continue until any new errors or notices introduced by the change are understood and fixed.
 

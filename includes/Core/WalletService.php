@@ -18,6 +18,11 @@ defined( 'ABSPATH' ) || exit;
 final class WalletService {
 
 	/**
+	 * Wallet transaction history option key.
+	 */
+	private const HISTORY_OPTION = 'maklaplace_wallet_history';
+
+	/**
 	 * Add commission to a chef wallet.
 	 *
 	 * @param int   $chef_user_id Chef user ID.
@@ -37,6 +42,16 @@ final class WalletService {
 		UserMeta::set( $chef_user_id, UserMeta::WALLET_STATUS, $this->determine_status( $balance ) );
 		UserMeta::set( $chef_user_id, UserMeta::WALLET_LAST_UPDATED, current_time( 'mysql' ) );
 		$this->mark_commission_processed( $order_id, true );
+		$this->append_history(
+			array(
+				'chef_user_id' => $chef_user_id,
+				'order_id'     => $order_id,
+				'type'         => 'commission_added',
+				'amount'       => $commission,
+				'balance'      => $balance,
+				'created_at'   => current_time( 'mysql' ),
+			)
+		);
 
 		$payload = array(
 			'chef_user_id' => $chef_user_id,
@@ -99,6 +114,16 @@ final class WalletService {
 				'status'       => $status,
 			)
 		);
+		$this->append_history(
+			array(
+				'chef_user_id' => $chef_user_id,
+				'type'         => 'status_changed',
+				'amount'       => 0.0,
+				'balance'      => $this->get_balance( $chef_user_id ),
+				'status'       => $status,
+				'created_at'   => current_time( 'mysql' ),
+			)
+		);
 
 		return true;
 	}
@@ -141,8 +166,35 @@ final class WalletService {
 				'deduction'    => $amount,
 			)
 		);
+		$this->append_history(
+			array(
+				'chef_user_id' => $chef_user_id,
+				'type'         => 'deduction',
+				'amount'       => $amount,
+				'balance'      => $new_balance,
+				'created_at'   => current_time( 'mysql' ),
+			)
+		);
 
 		return true;
+	}
+
+	/**
+	 * Get wallet transaction history.
+	 *
+	 * @param int $chef_user_id Chef user ID.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_history( int $chef_user_id ) : array {
+		$history = get_option( self::HISTORY_OPTION, array() );
+		$history = is_array( $history ) ? $history : array();
+
+		return array_values(
+			array_filter(
+				$history,
+				static fn( array $entry ) : bool => absint( $entry['chef_user_id'] ?? 0 ) === $chef_user_id
+			)
+		);
 	}
 
 	/**
@@ -222,5 +274,18 @@ final class WalletService {
 	 */
 	private function save_order_store( array $items ) : void {
 		update_option( 'maklaplace_orders', $items, false );
+	}
+
+	/**
+	 * Append a wallet history record.
+	 *
+	 * @param array<string, mixed> $entry Entry data.
+	 * @return void
+	 */
+	private function append_history( array $entry ) : void {
+		$history   = get_option( self::HISTORY_OPTION, array() );
+		$history   = is_array( $history ) ? $history : array();
+		$history[] = $entry;
+		update_option( self::HISTORY_OPTION, array_slice( $history, -500 ), false );
 	}
 }

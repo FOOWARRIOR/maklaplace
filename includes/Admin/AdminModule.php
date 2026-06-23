@@ -9,7 +9,7 @@ namespace MaklaPlace\Admin;
 
 use MaklaPlace\Core\Module;
 use MaklaPlace\Core\Container;
-use MaklaPlace\Core\Config;
+use MaklaPlace\Admin\AdminController;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -24,7 +24,11 @@ class AdminModule extends Module {
 	 * @return void
 	 */
 	public function register_hooks() : void {
-		error_log('AdminModule::register_hooks called');add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
+		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
+		$this->container->singleton( AdminController::class, static function ( Container $container ) {
+			return new AdminController( $container );
+		} );
+		$this->container->get( AdminController::class )->register_hooks();
 	}
 
 	/**
@@ -61,7 +65,7 @@ class AdminModule extends Module {
 	 * @return void
 	 */
 	public function dashboard_page() : void {
-    require_once MAKLAPLACE_PATH . '/includes/Admin/Pages/dashboard.php'; // fix
+		$this->container->get( AdminController::class )->dashboard_page();
 }
 
 	/**
@@ -70,7 +74,7 @@ class AdminModule extends Module {
 	 * @return void
 	 */
 	public function orders_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/orders.php';
+		$this->container->get( AdminController::class )->orders_page();
 	}
 
 	/**
@@ -79,7 +83,7 @@ class AdminModule extends Module {
 	 * @return void
 	 */
 	public function chefs_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/chefs.php';
+		$this->container->get( AdminController::class )->chefs_page();
 	}
 
 	/**
@@ -88,7 +92,7 @@ class AdminModule extends Module {
 	 * @return void
 	 */
 	public function customers_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/customers.php';
+		$this->container->get( AdminController::class )->customers_page();
 	}
 
 	/**
@@ -97,7 +101,7 @@ class AdminModule extends Module {
 	 * @return void
 	 */
 	public function menus_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/menus.php';
+		$this->container->get( AdminController::class )->menus_page();
 	}
 
 	/**
@@ -106,7 +110,7 @@ class AdminModule extends Module {
 	 * @return value
 	 */
 	public function wallets_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/wallets.php';
+		$this->container->get( AdminController::class )->wallets_page();
 	}
 
 	/**
@@ -115,7 +119,7 @@ class AdminModule extends Module {
 	 * @return value
 	 */
 	public function notifications_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/notifications.php';
+		$this->container->get( AdminController::class )->notifications_page();
 	}
 
 	/**
@@ -124,7 +128,7 @@ class AdminModule extends Module {
 	 * @return value
 	 */
 	public function analytics_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/analytics.php';
+		$this->container->get( AdminController::class )->analytics_page();
 	}
 
 	/**
@@ -133,7 +137,7 @@ class AdminModule extends Module {
 	 * @return value
 	 */
 	public function settings_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/settings.php';
+		$this->container->get( AdminController::class )->settings_page();
 	}
 
 	/**
@@ -142,7 +146,7 @@ class AdminModule extends Module {
 	 * @return value
 	 */
 	public function tools_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/tools.php';
+		$this->container->get( AdminController::class )->tools_page();
 	}
 }
 

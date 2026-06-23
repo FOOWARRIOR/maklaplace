@@ -169,6 +169,40 @@ final class MenuService {
 	}
 
 	/**
+	 * Get all stored menu items.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_menu_items() : array {
+		return array_values( $this->get_menu_store() );
+	}
+
+	/**
+	 * Toggle menu item availability.
+	 *
+	 * @param int  $menu_id Menu item ID.
+	 * @param bool $enabled Whether the item is enabled.
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	public function set_availability( int $menu_id, bool $enabled ) : array|\WP_Error {
+		$menu_items = $this->get_menu_store();
+		$record     = $menu_items[ $menu_id ] ?? null;
+
+		if ( ! is_array( $record ) ) {
+			return new \WP_Error( 'maklaplace_menu_not_found', __( 'Menu item not found.', 'maklaplace' ) );
+		}
+
+		$record[ MenuKeys::AVAILABILITY ] = $enabled ? 'available' : 'unavailable';
+		$record[ MenuKeys::UPDATED_AT ]   = current_time( 'mysql' );
+		$menu_items[ $menu_id ]           = $record;
+		$this->save_menu_store( $menu_items );
+
+		do_action( 'maklaplace_menu_item_updated', $record );
+
+		return $record;
+	}
+
+	/**
 	 * Filter menu items by availability.
 	 *
 	 * @param string $availability Availability status.

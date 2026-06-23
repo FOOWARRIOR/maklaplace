@@ -78,6 +78,15 @@ final class NotificationService {
 	}
 
 	/**
+	 * Get all stored notifications.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_all() : array {
+		return array_values( $this->get_store() );
+	}
+
+	/**
 	 * Build a message for a supported event.
 	 *
 	 * @param string $event_type Event type.
