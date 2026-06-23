@@ -415,4 +415,13 @@ final class OrderService {
 	private function next_id( array $items ) : int {
 		return empty( $items ) ? 1 : ( max( array_keys( $items ) ) + 1 );
 	}
+
+	/**
+	 * Get all orders.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_orders() : array {
+		return $this->get_order_store();
+	}
 }

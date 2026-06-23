@@ -24,7 +24,7 @@ class AdminModule extends Module {
 	 * @return void
 	 */
 	public function register_hooks() : void {
-		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
+		error_log('AdminModule::register_hooks called');add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 	}
 
 	/**
@@ -61,8 +61,8 @@ class AdminModule extends Module {
 	 * @return void
 	 */
 	public function dashboard_page() : void {
-		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/dashboard.php';
-	}
+    require_once MAKLAPLACE_PATH . '/includes/Admin/Pages/dashboard.php'; // fix
+}
 
 	/**
 	 * Orders page callback.
@@ -145,3 +145,4 @@ class AdminModule extends Module {
 		require_once MAKLAPLACE_PATH . 'includes/Admin/Pages/tools.php';
 	}
 }
+

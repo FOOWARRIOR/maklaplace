@@ -1,14 +1,21 @@
-﻿<?php
+<?php
 /**
- * Customers page placeholder.
+ * Customers page implementation.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+    exit;
 }
 
+// Get services from container
+$userService = $this->container->get( \MaklaPlace\Core\UserService::class );
 ?>
 <div class='wrap'>
 	<h1><?php esc_html_e( 'MaklaPlace Customers', 'maklaplace' ); ?></h1>
-	<p><?php esc_html_e( 'This is the customers page placeholder.', 'maklaplace' ); ?></p>
+	
+	<?php
+	// For now, just show a placeholder
+	// In a full implementation, we would get customers from the user service
+	?>
+	<p><?php esc_html_e( 'Customers management page - to be implemented', 'maklaplace' ); ?></p>
 </div>

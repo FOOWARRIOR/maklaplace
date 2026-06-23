@@ -1,14 +1,22 @@
-﻿<?php
+<?php
 /**
- * Settings page placeholder.
+ * Settings page implementation.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+    exit;
 }
-
 ?>
 <div class='wrap'>
 	<h1><?php esc_html_e( 'MaklaPlace Settings', 'maklaplace' ); ?></h1>
-	<p><?php esc_html_e( 'This is the settings page placeholder.', 'maklaplace' ); ?></p>
+	
+	<form method='post' action='options.php'>
+		<?php
+		// This would output the settings fields and sections
+		// settings_fields( 'maklaplace_settings_group' );
+		// do_settings_sections( 'maklaplace' );
+		?>
+		<p><?php esc_html_e( 'Settings form - to be implemented', 'maklaplace' ); ?></p>
+		<?php // submit_button(); ?>
+	</form>
 </div>
