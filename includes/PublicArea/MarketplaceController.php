@@ -46,6 +46,7 @@ final class MarketplaceController {
 		add_shortcode( 'maklaplace_chef_favorites', array( $this, 'render_favorites_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
 		add_action( 'wp_head', array( $this, 'output_meta_description' ) );
+		add_action( 'elementor/widgets/register', array( $this, 'register_elementor_widgets' ) );
 		add_action( 'admin_post_maklaplace_add_favorite_chef', array( $this, 'handle_add_favorite' ) );
 		add_action( 'admin_post_nopriv_maklaplace_add_favorite_chef', array( $this, 'handle_login_required' ) );
 		add_action( 'admin_post_maklaplace_remove_favorite_chef', array( $this, 'handle_remove_favorite' ) );
@@ -158,6 +159,14 @@ final class MarketplaceController {
 		}
 
 		return $html . '</div>';
+	}
+
+	public function register_elementor_widgets( $widgets_manager ) : void {
+		if ( ! class_exists( '\Elementor\Widget_Base' ) ) {
+			return;
+		}
+
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefDirectoryWidget() );
 	}
 
 	public function handle_add_favorite() : void {
