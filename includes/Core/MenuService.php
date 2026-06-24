@@ -203,6 +203,31 @@ final class MenuService {
 	}
 
 	/**
+	 * Toggle menu item featured state.
+	 *
+	 * @param int  $menu_id Menu item ID.
+	 * @param bool $featured Whether the item is featured.
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	public function set_featured( int $menu_id, bool $featured ) : array|\WP_Error {
+		$menu_items = $this->get_menu_store();
+		$record     = $menu_items[ $menu_id ] ?? null;
+
+		if ( ! is_array( $record ) ) {
+			return new \WP_Error( 'maklaplace_menu_not_found', __( 'Menu item not found.', 'maklaplace' ) );
+		}
+
+		$record[ MenuKeys::FEATURED ] = $featured ? 1 : 0;
+		$record[ MenuKeys::UPDATED_AT ] = current_time( 'mysql' );
+		$menu_items[ $menu_id ] = $record;
+		$this->save_menu_store( $menu_items );
+
+		do_action( 'maklaplace_menu_item_updated', $record );
+
+		return $record;
+	}
+
+	/**
 	 * Filter menu items by availability.
 	 *
 	 * @param string $availability Availability status.
@@ -259,6 +284,7 @@ final class MenuService {
 			MenuKeys::PREPARATION_TIME => absint( $data['preparation_time'] ?? 0 ),
 			MenuKeys::CATEGORY         => Validation::text( $data['category'] ?? '' ),
 			MenuKeys::CUISINE_TYPE     => Validation::text( is_array( $cuisine ) ? (string) reset( $cuisine ) : (string) $cuisine ),
+			MenuKeys::FEATURED         => ! empty( $data['featured'] ) ? 1 : 0,
 			MenuKeys::IMAGE            => $image,
 			MenuKeys::AVAILABILITY     => in_array( (string) ( $data['availability'] ?? 'unavailable' ), array( 'available', 'unavailable' ), true ) ? (string) $data['availability'] : 'unavailable',
 		);
@@ -328,6 +354,7 @@ final class MenuService {
 				MenuKeys::PREPARATION_TIME => $item[ MenuKeys::PREPARATION_TIME ],
 				MenuKeys::CATEGORY        => $item[ MenuKeys::CATEGORY ],
 				MenuKeys::CUISINE_TYPE    => $item[ MenuKeys::CUISINE_TYPE ],
+				MenuKeys::FEATURED        => ! empty( $item[ MenuKeys::FEATURED ] ) ? 1 : 0,
 				MenuKeys::IMAGE           => $item[ MenuKeys::IMAGE ],
 				MenuKeys::AVAILABILITY    => $item[ MenuKeys::AVAILABILITY ],
 			)

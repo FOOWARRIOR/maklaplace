@@ -23,6 +23,7 @@ final class OrderKeys {
 	public const SUBTOTAL                = 'maklaplace_order_subtotal';
 	public const TOTAL_AMOUNT            = 'maklaplace_order_total_amount';
 	public const CURRENCY                = 'maklaplace_order_currency';
+	public const PAYMENT_METHOD          = 'maklaplace_order_payment_method';
 	public const STATUS                  = 'maklaplace_order_status';
 	public const CREATED_AT              = 'maklaplace_order_created_at';
 	public const UPDATED_AT              = 'maklaplace_order_updated_at';

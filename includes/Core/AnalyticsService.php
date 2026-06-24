@@ -145,6 +145,47 @@ final class AnalyticsService {
 	}
 
 	/**
+	 * Calculate monthly customer growth for a chef.
+	 *
+	 * @param int $chef_user_id Chef user ID.
+	 * @return array<string, mixed>
+	 */
+	public function get_customer_growth_series( int $chef_user_id ) : array {
+		$orders = $this->get_orders();
+		$groups = array();
+
+		foreach ( $orders as $order ) {
+			if ( absint( $order[ OrderKeys::CHEF_USER_ID ] ?? 0 ) !== $chef_user_id ) {
+				continue;
+			}
+
+			$created = (string) ( $order[ OrderKeys::CREATED_AT ] ?? '' );
+			$customer_id = absint( $order[ OrderKeys::CUSTOMER_USER_ID ] ?? 0 );
+			if ( '' === $created || $customer_id <= 0 ) {
+				continue;
+			}
+
+			$month = gmdate( 'Y-m', strtotime( $created ) );
+			if ( ! isset( $groups[ $month ] ) ) {
+				$groups[ $month ] = array();
+			}
+			$groups[ $month ][ $customer_id ] = true;
+		}
+
+		$series = array();
+		foreach ( $groups as $month => $customers ) {
+			$series[ $month ] = count( $customers );
+		}
+
+		ksort( $series );
+
+		return array(
+			'period' => 'monthly',
+			'items'  => $series,
+		);
+	}
+
+	/**
 	 * Get stored analytics events.
 	 *
 	 * @return array<int, array<string, mixed>>

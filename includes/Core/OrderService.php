@@ -93,6 +93,7 @@ final class OrderService {
 			OrderKeys::SUBTOTAL         => $subtotal,
 			OrderKeys::TOTAL_AMOUNT     => $subtotal,
 			OrderKeys::CURRENCY         => 'DA',
+			OrderKeys::PAYMENT_METHOD   => Validation::text( $data['payment_method'] ?? 'cash' ),
 			OrderKeys::STATUS           => 'pending',
 			OrderKeys::CREATED_AT       => current_time( 'mysql' ),
 			OrderKeys::UPDATED_AT       => current_time( 'mysql' ),

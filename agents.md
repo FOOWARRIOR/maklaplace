@@ -7,6 +7,10 @@
 The plugin should be modular, scalable, secure, and built using WordPress best practices. Every major feature should be developed as an independent module to simplify future maintenance and expansion.
 - Author: Yazid Bouzifi
 
+## WordPress Administration Credentials
+- Username: `admin`
+- Password: `password`
+
 ## Plugin Architecture:
 Use a modular architecture:
 - Core
