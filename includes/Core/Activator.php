@@ -28,5 +28,7 @@ final class Activator {
 		$capabilities = new CapabilityManager();
 		$user_manager = new UserManager( $capabilities );
 		$user_manager->register();
+
+		flush_rewrite_rules();
 	}
 }

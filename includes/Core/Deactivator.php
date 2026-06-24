@@ -20,6 +20,6 @@ final class Deactivator {
 	 * @return void
 	 */
 	public static function deactivate() : void {
-		// Reserved for future cleanup.
+		flush_rewrite_rules();
 	}
 }

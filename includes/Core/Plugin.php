@@ -13,6 +13,7 @@ use MaklaPlace\Modules\AuthModule;
 use MaklaPlace\Modules\AnalyticsModule;
 use MaklaPlace\Modules\MenuModule;
 use MaklaPlace\Modules\OrdersModule;
+use MaklaPlace\Modules\PublicModule;
 use MaklaPlace\Modules\WalletModule;
 use MaklaPlace\Modules\NotificationModule;
 use MaklaPlace\Modules\UserModule;
@@ -138,6 +139,7 @@ final class Plugin {
 			new AnalyticsModule( $this->container, $this->config ),
 			new MenuModule( $this->container, $this->config ),
 			new OrdersModule( $this->container, $this->config ),
+			new PublicModule( $this->container, $this->config ),
 			new WalletModule( $this->container, $this->config ),
 			new NotificationModule( $this->container, $this->config ),
 			new AdminModule( $this->container, $this->config ),
