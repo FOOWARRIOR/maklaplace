@@ -19,11 +19,13 @@ final class ChefProfileKeys {
 	public const PROFILE_PHOTO         = 'maklaplace_chef_profile_photo';
 	public const COVER_IMAGE           = 'maklaplace_chef_cover_image';
 	public const CITY                  = 'maklaplace_chef_city';
+	public const WILAYA                = 'maklaplace_chef_wilaya';
 	public const ADDRESS               = 'maklaplace_chef_address';
 	public const DELIVERY_RADIUS       = 'maklaplace_chef_delivery_radius';
 	public const CUISINE_TYPES         = 'maklaplace_chef_cuisine_types';
 	public const WORKING_HOURS         = 'maklaplace_chef_working_hours';
 	public const PHONE_NUMBER          = 'maklaplace_chef_phone_number';
+	public const WHATSAPP              = 'maklaplace_chef_whatsapp';
 	public const PREPARATION_TIME      = 'maklaplace_chef_preparation_time';
 	public const VERIFICATION_STATUS   = 'maklaplace_chef_verification_status';
 	public const PROFILE_COMPLETION    = 'maklaplace_chef_profile_completion';

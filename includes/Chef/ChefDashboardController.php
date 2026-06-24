@@ -216,16 +216,16 @@ final class ChefDashboardController {
 		$this->container->get( ChefProfileService::class )->update_profile(
 			$chef_id,
 			array(
-				ChefProfileKeys::DISPLAY_NAME => sanitize_text_field( (string) ( $data['business_name'] ?? '' ) ),
-				ChefProfileKeys::BIO => wp_kses_post( (string) ( $data['description'] ?? '' ) ),
-				ChefProfileKeys::PHONE_NUMBER => sanitize_text_field( (string) ( $data['phone'] ?? '' ) ),
+				'display_name' => sanitize_text_field( (string) ( $data['business_name'] ?? '' ) ),
+				'bio' => wp_kses_post( (string) ( $data['description'] ?? '' ) ),
+				'phone_number' => sanitize_text_field( (string) ( $data['phone'] ?? '' ) ),
 				'whatsapp' => sanitize_text_field( (string) ( $data['whatsapp'] ?? '' ) ),
-				ChefProfileKeys::ADDRESS => sanitize_text_field( (string) ( $data['address'] ?? '' ) ),
-				ChefProfileKeys::CITY => sanitize_text_field( (string) ( $data['city'] ?? '' ) ),
+				'address' => sanitize_text_field( (string) ( $data['address'] ?? '' ) ),
+				'city' => sanitize_text_field( (string) ( $data['city'] ?? '' ) ),
 				'wilaya' => sanitize_text_field( (string) ( $data['wilaya'] ?? '' ) ),
-				ChefProfileKeys::COVER_IMAGE => esc_url_raw( (string) ( $data['cover_image'] ?? '' ) ),
-				ChefProfileKeys::PROFILE_PHOTO => esc_url_raw( (string) ( $data['logo'] ?? '' ) ),
-				ChefProfileKeys::WORKING_HOURS => sanitize_text_field( (string) ( $data['working_hours'] ?? '' ) ),
+				'cover_image' => esc_url_raw( (string) ( $data['cover_image'] ?? '' ) ),
+				'profile_photo' => esc_url_raw( (string) ( $data['logo'] ?? '' ) ),
+				'working_hours' => sanitize_text_field( (string) ( $data['working_hours'] ?? '' ) ),
 			)
 		);
 		wp_safe_redirect( admin_url( 'admin.php?page=maklaplace-chef-profile&updated=1' ) );
@@ -322,9 +322,9 @@ final class ChefDashboardController {
 			'business_name' => array( __( 'Business Name', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::DISPLAY_NAME ] ?? '' ) ),
 			'description' => array( __( 'Description', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::BIO ] ?? '' ) ),
 			'phone' => array( __( 'Phone', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::PHONE_NUMBER ] ?? '' ) ),
-			'whatsapp' => array( __( 'WhatsApp', 'maklaplace' ), '' ),
+			'whatsapp' => array( __( 'WhatsApp', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::WHATSAPP ] ?? '' ) ),
 			'address' => array( __( 'Address', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::ADDRESS ] ?? '' ) ),
-			'wilaya' => array( __( 'Wilaya', 'maklaplace' ), '' ),
+			'wilaya' => array( __( 'Wilaya', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::WILAYA ] ?? '' ) ),
 			'city' => array( __( 'City', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::CITY ] ?? '' ) ),
 			'cover_image' => array( __( 'Cover Image', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::COVER_IMAGE ] ?? '' ) ),
 			'logo' => array( __( 'Logo', 'maklaplace' ), (string) ( $profile[ ChefProfileKeys::PROFILE_PHOTO ] ?? '' ) ),
@@ -684,7 +684,7 @@ final class ChefProductsListTable extends BaseChefListTable {
 		$delete = wp_nonce_url( admin_url( 'admin-post.php?action=maklaplace_chef_delete_product&product_id=' . (int) $item['id'] ), 'maklaplace_chef_delete_product', 'maklaplace_nonce' );
 		$toggle = wp_nonce_url( admin_url( 'admin-post.php?action=maklaplace_chef_toggle_product&product_id=' . (int) $item['id'] ), 'maklaplace_chef_toggle_product', 'maklaplace_nonce' );
 		$featured = wp_nonce_url( admin_url( 'admin-post.php?action=maklaplace_chef_toggle_featured&product_id=' . (int) $item['id'] ), 'maklaplace_chef_toggle_featured', 'maklaplace_nonce' );
-		return '<a href="' . esc_url( admin_url( 'admin.php?page=maklaplace-chef-products&product_id=' . (int) $item['id'] ) ) . '">' . esc_html__( 'Edit', 'maklaplace' ) . '</a> | <a href="' . esc_url( $delete ) . '">' . esc_html__( 'Delete', 'maklaplace' ) . '</a> | <a href="' . esc_url( $toggle . '&enabled=' . ( 'available' === (string) $item['availability'] ? 0 : 1 ) ) . '">' . esc_html__( 'Toggle Availability', 'maklaplace' ) . '</a> | <a href="' . esc_url( $featured . '&featured=' . ( empty( $item['featured'] ) ? 1 : 0 ) ) . '">' . esc_html__( 'Toggle Featured', 'maklaplace' ) . '</a>';
+		return '<a href="' . esc_url( admin_url( 'admin.php?page=maklaplace-chef-products&product_id=' . (int) $item['id'] ) ) . '">' . esc_html__( 'Edit', 'maklaplace' ) . '</a> | <a href="' . esc_url( $delete ) . '" onclick="return confirm(\'' . esc_js( __( 'Delete this product?', 'maklaplace' ) ) . '\');">' . esc_html__( 'Delete', 'maklaplace' ) . '</a> | <a href="' . esc_url( $toggle . '&enabled=' . ( 'available' === (string) $item['availability'] ? 0 : 1 ) ) . '">' . esc_html__( 'Toggle Availability', 'maklaplace' ) . '</a> | <a href="' . esc_url( $featured . '&featured=' . ( empty( $item['featured'] ) ? 1 : 0 ) ) . '">' . esc_html__( 'Toggle Featured', 'maklaplace' ) . '</a>';
 	}
 }
 
