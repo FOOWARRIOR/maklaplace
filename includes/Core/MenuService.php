@@ -151,8 +151,12 @@ final class MenuService {
 	public function get_menu_items_by_chef( int $chef_user_id ) : array {
 		return array_values(
 			array_filter(
-				$this->get_menu_store(),
-				static fn( array $item ) : bool => (int) $item[ MenuKeys::CHEF_USER_ID ] === $chef_user_id
+				array_map(
+					static fn( array $item, int|string $id ) : array => array_merge( array( 'id' => (int) $id ), $item ),
+					$this->get_menu_store(),
+					array_keys( $this->get_menu_store() )
+				),
+				static fn( array $item ) : bool => (int) ( $item[ MenuKeys::CHEF_USER_ID ] ?? 0 ) === $chef_user_id
 			)
 		);
 	}
@@ -174,7 +178,13 @@ final class MenuService {
 	 * @return array<int, array<string, mixed>>
 	 */
 	public function get_menu_items() : array {
-		return array_values( $this->get_menu_store() );
+		return array_values(
+			array_map(
+				static fn( array $item, int|string $id ) : array => array_merge( array( 'id' => (int) $id ), $item ),
+				$this->get_menu_store(),
+				array_keys( $this->get_menu_store() )
+			)
+		);
 	}
 
 	/**

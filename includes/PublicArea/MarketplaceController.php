@@ -58,10 +58,14 @@ final class MarketplaceController {
 	public function register_rewrite_rules() : void {
 		add_rewrite_rule( '^chefs/?$', 'index.php?post_type=page&maklaplace_chefs=1', 'top' );
 		add_rewrite_rule( '^chefs/([^/]+)/?$', 'index.php?post_type=page&maklaplace_chef=$matches[1]', 'top' );
+		add_rewrite_rule( '^favorites/?$', 'index.php?post_type=page&maklaplace_favorites=1', 'top' );
+		add_rewrite_rule( '^order/?$', 'index.php?post_type=page&maklaplace_order_entry=1', 'top' );
 	}
 
 	public function register_query_vars( array $vars ) : array {
 		$vars[] = 'maklaplace_chefs';
+		$vars[] = 'maklaplace_favorites';
+		$vars[] = 'maklaplace_order_entry';
 		$vars[] = self::QUERY_VAR;
 		return $vars;
 	}
@@ -70,6 +74,16 @@ final class MarketplaceController {
 		$path = trim( (string) parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH ), '/' );
 		if ( 'chefs' === $path ) {
 			$this->render_directory_route();
+			exit;
+		}
+
+		if ( 'favorites' === $path ) {
+			$this->render_favorites_route();
+			exit;
+		}
+
+		if ( 'order' === $path ) {
+			$this->render_order_entry_route();
 			exit;
 		}
 
@@ -93,6 +107,14 @@ final class MarketplaceController {
 			$parts['title'] = __( 'Chefs', 'maklaplace' );
 		}
 
+		if ( get_query_var( 'maklaplace_favorites' ) ) {
+			$parts['title'] = __( 'Favorites', 'maklaplace' );
+		}
+
+		if ( get_query_var( 'maklaplace_order_entry' ) ) {
+			$parts['title'] = __( 'Start Order', 'maklaplace' );
+		}
+
 		$chef_slug = (string) get_query_var( self::QUERY_VAR );
 		if ( '' !== $chef_slug ) {
 			$chef = $this->get_chef_by_slug( $chef_slug );
@@ -109,19 +131,40 @@ final class MarketplaceController {
 		wp_enqueue_style( 'maklaplace-public' );
 		wp_add_inline_style(
 			'maklaplace-public',
-			'.maklaplace-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}.maklaplace-card,.maklaplace-panel{background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px}.maklaplace-meta{color:#646970;font-size:14px}.maklaplace-actions{display:flex;gap:8px;flex-wrap:wrap}.maklaplace-chip{display:inline-block;background:#f6f7f7;border:1px solid #dcdcde;border-radius:999px;padding:4px 10px;margin:0 6px 6px 0}.maklaplace-product{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #f0f0f1}.maklaplace-product img{width:88px;height:88px;object-fit:cover;border-radius:6px}.maklaplace-favorites form,.maklaplace-order-form{display:inline-block;margin:0 8px 8px 0}'
+			'.maklaplace-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}.maklaplace-card,.maklaplace-panel{background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px}.maklaplace-meta{color:#646970;font-size:14px}.maklaplace-actions{display:flex;gap:8px;flex-wrap:wrap}.maklaplace-page-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.maklaplace-chip{display:inline-block;background:#f6f7f7;border:1px solid #dcdcde;border-radius:999px;padding:4px 10px;margin:0 6px 6px 0}.maklaplace-product{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #f0f0f1}.maklaplace-product img{width:88px;height:88px;object-fit:cover;border-radius:6px}.maklaplace-favorites form,.maklaplace-order-form{display:inline-block;margin:0 8px 8px 0}'
 		);
 	}
 
 	public function output_meta_description() : void {
 		$chef_slug = (string) get_query_var( self::QUERY_VAR );
-		if ( '' === $chef_slug && ! get_query_var( 'maklaplace_chefs' ) ) {
+		$is_directory = (bool) get_query_var( 'maklaplace_chefs' );
+		$is_favorites = (bool) get_query_var( 'maklaplace_favorites' );
+		$is_order_entry = (bool) get_query_var( 'maklaplace_order_entry' );
+
+		if ( '' === $chef_slug && ! $is_directory && ! $is_favorites && ! $is_order_entry ) {
 			return;
 		}
 
-		$description = get_query_var( self::QUERY_VAR ) ? __( 'View chef profiles, menus, reviews, and start your order.', 'maklaplace' ) : __( 'Discover approved chefs on MaklaPlace.', 'maklaplace' );
+		if ( $is_order_entry ) {
+			$description = __( 'Start an order and continue to the upcoming checkout flow.', 'maklaplace' );
+		} elseif ( $is_favorites ) {
+			$description = __( 'View your saved favorite chefs on MaklaPlace.', 'maklaplace' );
+		} elseif ( '' !== $chef_slug ) {
+			$description = __( 'View chef profiles, menus, reviews, and start your order.', 'maklaplace' );
+		} else {
+			$description = __( 'Discover approved chefs on MaklaPlace.', 'maklaplace' );
+		}
+		$canonical = $this->get_current_canonical_url();
+		$og_title = $this->get_current_social_title( $chef_slug );
 		echo '<meta name="description" content="' . esc_attr( $description ) . '">' . "\n";
+		echo '<link rel="canonical" href="' . esc_url( $canonical ) . '">' . "\n";
 		echo '<meta property="og:type" content="website">' . "\n";
+		echo '<meta property="og:title" content="' . esc_attr( $og_title ) . '">' . "\n";
+		echo '<meta property="og:description" content="' . esc_attr( $description ) . '">' . "\n";
+		echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+		echo '<meta name="twitter:title" content="' . esc_attr( $og_title ) . '">' . "\n";
+		echo '<meta name="twitter:description" content="' . esc_attr( $description ) . '">' . "\n";
+		$this->output_structured_data();
 	}
 
 	public function render_directory_shortcode( array $atts = array() ) : string {
@@ -166,7 +209,22 @@ final class MarketplaceController {
 			return;
 		}
 
+		if ( method_exists( $widgets_manager, 'register_category' ) ) {
+			$widgets_manager->register_category(
+				'maklaplace',
+				array(
+					'title' => __( 'MaklaPlace', 'maklaplace' ),
+					'icon'  => 'fa fa-plug',
+				)
+			);
+		}
+
 		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefDirectoryWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefCardWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefMenuWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefReviewsWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefFavoritesWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefReviewsListWidget() );
 	}
 
 	public function handle_add_favorite() : void {
@@ -191,7 +249,17 @@ final class MarketplaceController {
 		$this->require_customer_access();
 		check_admin_referer( 'maklaplace_start_order', 'maklaplace_nonce' );
 		$chef_id = absint( $_POST['chef_id'] ?? 0 );
-		wp_safe_redirect( add_query_arg( array( 'chef_id' => $chef_id, 'step' => 'customer-details' ), home_url( '/order/' ) ) );
+		$item_id = absint( $_POST['item_id'] ?? 0 );
+		$quantity = max( 1, absint( $_POST['quantity'] ?? 1 ) );
+		$args = array(
+			'chef_id' => $chef_id,
+			'step'    => 'customer-details',
+		);
+		if ( $item_id > 0 ) {
+			$args['item_id'] = $item_id;
+			$args['quantity'] = $quantity;
+		}
+		wp_safe_redirect( add_query_arg( $args, home_url( '/order/' ) ) );
 		exit;
 	}
 
@@ -202,6 +270,52 @@ final class MarketplaceController {
 
 	private function render_directory_route() : void {
 		$this->render_document( $this->render_directory( array() ), __( 'Chefs', 'maklaplace' ) );
+	}
+
+	private function render_favorites_route() : void {
+		$content = '<div class="wrap maklaplace-public-marketplace"><h1>' . esc_html__( 'Favorites', 'maklaplace' ) . '</h1>';
+		$content .= $this->render_favorites_shortcode();
+		$content .= '</div>';
+		$this->render_document( $content, __( 'Favorites', 'maklaplace' ) );
+	}
+
+	private function render_order_entry_route() : void {
+		$chef_id = absint( $_GET['chef_id'] ?? 0 );
+		$chef = $chef_id > 0 ? get_userdata( $chef_id ) : false;
+		$step = sanitize_key( (string) ( $_GET['step'] ?? 'customer-details' ) );
+		$item_id = absint( $_GET['item_id'] ?? 0 );
+		$quantity = max( 1, absint( $_GET['quantity'] ?? 1 ) );
+		$seed_item = array();
+		if ( $chef_id > 0 && $item_id > 0 ) {
+			foreach ( $this->container->get( MenuService::class )->get_menu_items_by_chef( $chef_id ) as $item ) {
+				$current_item_id = absint( $item['id'] ?? 0 );
+				if ( $current_item_id === $item_id ) {
+					$seed_item = $item;
+					break;
+				}
+			}
+		}
+		$content = '<div class="wrap maklaplace-public-marketplace"><h1>' . esc_html__( 'Start Order', 'maklaplace' ) . '</h1><div class="maklaplace-panel">';
+		if ( $chef instanceof WP_User ) {
+			$content .= '<p><strong>' . esc_html__( 'Chef:', 'maklaplace' ) . '</strong> ' . esc_html( $this->get_chef_display_name( $chef->ID ) ) . '</p>';
+			$content .= '<p><strong>' . esc_html__( 'Chef ID:', 'maklaplace' ) . '</strong> ' . esc_html( number_format_i18n( $chef->ID ) ) . '</p>';
+		} else {
+			$content .= '<p>' . esc_html__( 'No chef selected yet.', 'maklaplace' ) . '</p>';
+		}
+		$content .= '<p><strong>' . esc_html__( 'Current Step:', 'maklaplace' ) . '</strong> ' . esc_html( $step ) . '</p>';
+		if ( $item_id > 0 ) {
+			$content .= '<p><strong>' . esc_html__( 'Seed Item ID:', 'maklaplace' ) . '</strong> ' . esc_html( number_format_i18n( $item_id ) ) . '</p>';
+			$content .= '<p><strong>' . esc_html__( 'Quantity:', 'maklaplace' ) . '</strong> ' . esc_html( number_format_i18n( $quantity ) ) . '</p>';
+			if ( ! empty( $seed_item ) ) {
+				$content .= '<p><strong>' . esc_html__( 'Seed Item:', 'maklaplace' ) . '</strong> ' . esc_html( (string) ( $seed_item[ MenuKeys::TITLE ] ?? '' ) ) . '</p>';
+			}
+		}
+		$content .= '<p>' . esc_html__( 'Checkout is not available yet. This page only prepares the upcoming order flow.', 'maklaplace' ) . '</p>';
+		if ( $chef instanceof WP_User ) {
+			$content .= '<p><a class="button button-primary" href="' . esc_url( home_url( '/chefs/' . $this->get_chef_slug( $chef->ID ) . '/' ) ) . '">' . esc_html__( 'Back to Chef', 'maklaplace' ) . '</a></p>';
+		}
+		$content .= '</div></div>';
+		$this->render_document( $content, __( 'Start Order', 'maklaplace' ) );
 	}
 
 	private function render_single_route( string $chef_slug ) : void {
@@ -221,7 +335,7 @@ final class MarketplaceController {
 		$chef_service = $this->container->get( ChefProfileService::class );
 		$menu_service = $this->container->get( MenuService::class );
 		$per_page = max( 1, min( 24, absint( $atts['per_page'] ?? 12 ) ) );
-		$page = max( 1, absint( $_GET['paged'] ?? 1 ) );
+		$page = $this->get_current_directory_page();
 		$search = sanitize_text_field( (string) ( $_GET['s'] ?? '' ) );
 		$cuisine = sanitize_text_field( (string) ( $_GET['cuisine'] ?? '' ) );
 		$city = sanitize_text_field( (string) ( $_GET['city'] ?? '' ) );
@@ -275,7 +389,7 @@ final class MarketplaceController {
 		$total = count( $chefs );
 		$chefs = array_slice( $chefs, ( $page - 1 ) * $per_page, $per_page );
 
-		$html = '<div class="wrap maklaplace-public-marketplace"><h1>' . esc_html__( 'Chefs', 'maklaplace' ) . '</h1>';
+		$html = '<div class="wrap maklaplace-public-marketplace"><div class="maklaplace-page-actions"><h1>' . esc_html__( 'Chefs', 'maklaplace' ) . '</h1><a class="button" href="' . esc_url( home_url( '/favorites/' ) ) . '">' . esc_html__( 'Favorites', 'maklaplace' ) . '</a></div>';
 		$html .= $this->render_filters( $search, $cuisine, $city, $wilaya, $availability, $sort );
 		$html .= '<div class="maklaplace-grid">';
 		foreach ( $chefs as $chef ) {
@@ -328,19 +442,59 @@ final class MarketplaceController {
 			)
 		);
 
+		$business_name = trim( (string) ( $profile[ ChefProfileKeys::DISPLAY_NAME ] ?? '' ) );
+		if ( '' === $business_name ) {
+			$business_name = $this->get_chef_display_name( $chef_id );
+		}
+
+		$cover_image = esc_url( (string) ( $profile[ ChefProfileKeys::COVER_IMAGE ] ?? '' ) );
+		$logo_image = esc_url( (string) ( $profile[ ChefProfileKeys::PROFILE_PHOTO ] ?? '' ) );
+		$cuisine_types = array_filter(
+			array_map(
+				'trim',
+				is_array( $profile[ ChefProfileKeys::CUISINE_TYPES ] ?? null ) ? (array) $profile[ ChefProfileKeys::CUISINE_TYPES ] : explode( ',', (string) ( $profile[ ChefProfileKeys::CUISINE_TYPES ] ?? '' ) )
+			)
+		);
+		$working_hours = $profile[ ChefProfileKeys::WORKING_HOURS ] ?? '';
+		$working_hours_text = is_array( $working_hours ) ? implode( ', ', array_filter( array_map( 'trim', $working_hours ) ) ) : trim( (string) $working_hours );
+
 		$html = '<div class="wrap maklaplace-public-chef">';
-		$html .= '<h1>' . esc_html( $this->get_chef_display_name( $chef_id ) ) . '</h1>';
+		$html .= '<div class="maklaplace-hero">';
+		$html .= '' !== $cover_image
+			? '<img src="' . $cover_image . '" alt="' . esc_attr( $business_name ) . '" loading="lazy">'
+			: '<div class="maklaplace-image-placeholder">' . esc_html__( 'Cover image not available', 'maklaplace' ) . '</div>';
+		$html .= '</div>';
 		$html .= '<div class="maklaplace-panel">';
-		$html .= '<p>' . esc_html( (string) ( $profile[ ChefProfileKeys::BIO ] ?? '' ) ) . '</p>';
+		$html .= '<div class="maklaplace-chef-header">';
+		$html .= '' !== $logo_image
+			? '<img class="maklaplace-chef-logo" src="' . $logo_image . '" alt="' . esc_attr( $business_name ) . '" loading="lazy">'
+			: '<div class="maklaplace-chef-logo maklaplace-image-placeholder">' . esc_html__( 'Logo not available', 'maklaplace' ) . '</div>';
+		$html .= '<div><h1>' . esc_html( $business_name ) . '</h1>';
+		$html .= '<p>' . esc_html( (string) ( $profile[ ChefProfileKeys::BIO ] ?? '' ) ) . '</p></div>';
+		$html .= '</div>';
 		$html .= '<p>' . esc_html__( 'City:', 'maklaplace' ) . ' ' . esc_html( (string) ( $profile[ ChefProfileKeys::CITY ] ?? '' ) ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Wilaya:', 'maklaplace' ) . ' ' . esc_html( (string) ( $profile[ ChefProfileKeys::WILAYA ] ?? '' ) ) . '</p>';
-		$html .= '<p>' . esc_html__( 'Working Hours:', 'maklaplace' ) . ' ' . esc_html( is_array( $profile[ ChefProfileKeys::WORKING_HOURS ] ?? null ) ? implode( ', ', (array) $profile[ ChefProfileKeys::WORKING_HOURS ] ) : (string) ( $profile[ ChefProfileKeys::WORKING_HOURS ] ?? '' ) ) . '</p>';
-		$html .= '<p>' . esc_html__( 'Average Rating:', 'maklaplace' ) . ' ' . esc_html( number_format_i18n( (float) ( $reviews['average_rating'] ?? 0 ), 1 ) ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Cuisine Types:', 'maklaplace' ) . ' ';
+		if ( ! empty( $cuisine_types ) ) {
+			foreach ( $cuisine_types as $cuisine ) {
+				$html .= '<span class="maklaplace-chip">' . esc_html( $cuisine ) . '</span>';
+			}
+		} else {
+			$html .= esc_html__( 'Not specified', 'maklaplace' );
+		}
+		$html .= '</p>';
+		$html .= '<p>' . esc_html__( 'Working Hours:', 'maklaplace' ) . ' ' . esc_html( '' !== $working_hours_text ? $working_hours_text : __( 'Not specified', 'maklaplace' ) ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Rating Summary:', 'maklaplace' ) . ' ' . esc_html( number_format_i18n( (float) ( $reviews['average_rating'] ?? 0 ), 1 ) ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Review Count:', 'maklaplace' ) . ' ' . esc_html( number_format_i18n( (int) ( $reviews['total_reviews'] ?? 0 ) ) ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Completed Orders:', 'maklaplace' ) . ' ' . esc_html( number_format_i18n( (int) ( $stats['completed_orders'] ?? 0 ) ) ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Average Rating:', 'maklaplace' ) . ' ' . esc_html( number_format_i18n( (float) ( $stats['average_rating'] ?? $reviews['average_rating'] ?? 0 ), 1 ) ) . '</p>';
 		$html .= '</div>';
 		$html .= '<div class="maklaplace-actions">';
 		$html .= $this->render_start_order_button( $chef_id );
+		$html .= '<a class="button button-secondary" href="' . esc_url( home_url( '/order/?chef_id=' . $chef_id . '&step=customer-details' ) ) . '">' . esc_html__( 'Start Order', 'maklaplace' ) . '</a>';
+		if ( is_user_logged_in() && $this->current_user_can_favorite() ) {
+			$html .= '<a class="button" href="' . esc_url( home_url( '/favorites/' ) ) . '">' . esc_html__( 'View Favorites', 'maklaplace' ) . '</a>';
+		}
 		$html .= '</div>';
 		$html .= $this->render_menu( $chef_id, array() );
 		$html .= $this->render_reviews( $chef_id );
@@ -350,14 +504,19 @@ final class MarketplaceController {
 
 	private function render_menu( int $chef_id, array $atts ) : string {
 		$menu_service = $this->container->get( MenuService::class );
-		$items = array_values(
-			array_filter(
-				$menu_service->get_menu_items_by_chef( $chef_id ),
-				static fn( array $item ) : bool => 'available' === (string) ( $item[ MenuKeys::AVAILABILITY ] ?? '' )
-			)
-		);
+		$items = array_values( $menu_service->get_menu_items_by_chef( $chef_id ) );
 		$category = sanitize_text_field( (string) ( $_GET['category'] ?? '' ) );
 		$search = sanitize_text_field( (string) ( $_GET['menu_s'] ?? '' ) );
+		$availability = sanitize_key( (string) ( $_GET['menu_availability'] ?? 'available' ) );
+
+		if ( 'available' === $availability ) {
+			$items = array_values(
+				array_filter(
+					$items,
+					static fn( array $item ) : bool => 'available' === (string) ( $item[ MenuKeys::AVAILABILITY ] ?? '' )
+				)
+			);
+		}
 
 		if ( '' !== $category ) {
 			$items = array_values( array_filter( $items, static fn( array $item ) : bool => strtolower( (string) ( $item[ MenuKeys::CATEGORY ] ?? '' ) ) === strtolower( $category ) ) );
@@ -367,17 +526,33 @@ final class MarketplaceController {
 			$items = array_values( array_filter( $items, static fn( array $item ) : bool => false !== strpos( strtolower( (string) ( $item[ MenuKeys::TITLE ] ?? '' ) . ' ' . (string) ( $item[ MenuKeys::DESCRIPTION ] ?? '' ) ), strtolower( $search ) ) ) );
 		}
 
+		$categories = array();
+		foreach ( $menu_service->get_menu_items_by_chef( $chef_id ) as $item ) {
+			$value = sanitize_text_field( (string) ( $item[ MenuKeys::CATEGORY ] ?? '' ) );
+			if ( '' !== $value ) {
+				$categories[ strtolower( $value ) ] = $value;
+			}
+		}
+		ksort( $categories );
+
 		$html = '<div class="maklaplace-panel"><h2>' . esc_html__( 'Menu', 'maklaplace' ) . '</h2>';
 		$html .= '<form method="get"><input type="hidden" name="chef_id" value="' . esc_attr( (string) $chef_id ) . '">';
 		$html .= '<input type="search" name="menu_s" value="' . esc_attr( $search ) . '" placeholder="' . esc_attr__( 'Search menu items', 'maklaplace' ) . '">';
-		$html .= '<select name="category"><option value="">' . esc_html__( 'All categories', 'maklaplace' ) . '</option><option value="starter">' . esc_html__( 'Starter', 'maklaplace' ) . '</option><option value="main">' . esc_html__( 'Main', 'maklaplace' ) . '</option><option value="dessert">' . esc_html__( 'Dessert', 'maklaplace' ) . '</option><option value="drink">' . esc_html__( 'Drink', 'maklaplace' ) . '</option><option value="side">' . esc_html__( 'Side', 'maklaplace' ) . '</option><option value="special">' . esc_html__( 'Special', 'maklaplace' ) . '</option></select>';
+		$html .= '<select name="category"><option value="">' . esc_html__( 'All categories', 'maklaplace' ) . '</option>';
+		foreach ( $categories as $value ) {
+			$html .= '<option value="' . esc_attr( strtolower( $value ) ) . '"' . selected( $category, strtolower( $value ), false ) . '>' . esc_html( ucfirst( $value ) ) . '</option>';
+		}
+		$html .= '</select>';
+		$html .= '<select name="menu_availability"><option value="available"' . selected( $availability, 'available', false ) . '>' . esc_html__( 'Available only', 'maklaplace' ) . '</option><option value="all"' . selected( $availability, 'all', false ) . '>' . esc_html__( 'All products', 'maklaplace' ) . '</option></select>';
 		$html .= '<button type="submit" class="button">' . esc_html__( 'Filter', 'maklaplace' ) . '</button></form>';
 		foreach ( $items as $item ) {
 			$html .= '<div class="maklaplace-product">';
-			$html .= '<div><img src="' . esc_url( (string) ( $item[ MenuKeys::IMAGE ] ?? '' ) ) . '" alt="' . esc_attr( (string) ( $item[ MenuKeys::TITLE ] ?? '' ) ) . '"></div>';
+			$image = esc_url( (string) ( $item[ MenuKeys::IMAGE ] ?? '' ) );
+			$html .= '<div>' . ( '' !== $image ? '<img src="' . $image . '" alt="' . esc_attr( (string) ( $item[ MenuKeys::TITLE ] ?? '' ) ) . '" loading="lazy">' : '<div class="maklaplace-image-placeholder">' . esc_html__( 'Image not available', 'maklaplace' ) . '</div>' ) . '</div>';
 			$html .= '<div><h3>' . esc_html( (string) ( $item[ MenuKeys::TITLE ] ?? '' ) ) . '</h3>';
 			$html .= '<p>' . esc_html( wp_strip_all_tags( (string) ( $item[ MenuKeys::DESCRIPTION ] ?? '' ) ) ) . '</p>';
-			$html .= '<p>' . esc_html( number_format_i18n( (float) ( $item[ MenuKeys::PRICE ] ?? 0 ) ) ) . ' DA · ' . esc_html( number_format_i18n( (int) ( $item[ MenuKeys::PREPARATION_TIME ] ?? 0 ) ) ) . ' min</p></div>';
+			$html .= '<p>' . esc_html( number_format_i18n( (float) ( $item[ MenuKeys::PRICE ] ?? 0 ) ) ) . ' DA &middot; ' . esc_html( number_format_i18n( (int) ( $item[ MenuKeys::PREPARATION_TIME ] ?? 0 ) ) ) . ' min</p></div>';
+			$html .= '<div class="maklaplace-actions"><a class="button button-primary" href="' . esc_url( add_query_arg( array( 'chef_id' => $chef_id, 'step' => 'customer-details', 'item_id' => absint( $item['id'] ?? 0 ), 'quantity' => 1 ), home_url( '/order/' ) ) ) . '">' . esc_html__( 'Start Order', 'maklaplace' ) . '</a></div>';
 			$html .= '</div>';
 		}
 		if ( empty( $items ) ) {
@@ -396,7 +571,19 @@ final class MarketplaceController {
 		$html .= '<p>' . esc_html__( 'Average rating:', 'maklaplace' ) . ' ' . esc_html( number_format_i18n( (float) ( $stats['average_rating'] ?? 0 ), 1 ) ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Total reviews:', 'maklaplace' ) . ' ' . esc_html( number_format_i18n( (int) ( $stats['total_reviews'] ?? 0 ) ) ) . '</p>';
 		foreach ( $reviews as $review ) {
-			$html .= '<div class="maklaplace-card"><strong>' . esc_html( number_format_i18n( (float) ( $review['rating'] ?? 0 ), 1 ) ) . '</strong><div>' . esc_html( (string) ( $review['reviewer_name'] ?? '' ) ) . '</div><p>' . esc_html( (string) ( $review['comment'] ?? '' ) ) . '</p></div>';
+			$reviewer = trim( (string) ( $review['reviewer_name'] ?? '' ) );
+			$comment = trim( (string) ( $review['comment'] ?? '' ) );
+			$created_at = trim( (string) ( $review['created_at'] ?? '' ) );
+			$html .= '<div class="maklaplace-card">';
+			$html .= '<strong>' . esc_html( number_format_i18n( (float) ( $review['rating'] ?? 0 ), 1 ) ) . '</strong>';
+			$html .= '<div>' . esc_html( '' !== $reviewer ? $reviewer : __( 'Anonymous', 'maklaplace' ) ) . '</div>';
+			if ( '' !== $created_at ) {
+				$html .= '<div class="maklaplace-meta">' . esc_html( mysql2date( __( 'M j, Y g:i A', 'maklaplace' ), $created_at ) ) . '</div>';
+			}
+			if ( '' !== $comment ) {
+				$html .= '<p>' . esc_html( $comment ) . '</p>';
+			}
+			$html .= '</div>';
 		}
 		if ( empty( $reviews ) ) {
 			$html .= '<p>' . esc_html__( 'No reviews yet.', 'maklaplace' ) . '</p>';
@@ -435,17 +622,164 @@ final class MarketplaceController {
 			return '';
 		}
 
-		return '<div class="tablenav"><div class="tablenav-pages">' . paginate_links( array(
-			'total'   => $total_pages,
-			'current' => $page,
-			'format'  => '?paged=%#%',
-		) ) . '</div></div>';
+		return '<div class="tablenav"><div class="tablenav-pages">' . paginate_links(
+			array(
+				'base'      => esc_url_raw( add_query_arg( 'paged', '%#%', $this->get_current_directory_url() ) ),
+				'format'    => '',
+				'total'     => $total_pages,
+				'current'   => $page,
+				'add_args'  => $this->get_directory_query_args(),
+				'prev_text' => __( '&laquo; Previous', 'maklaplace' ),
+				'next_text' => __( 'Next &raquo;', 'maklaplace' ),
+			)
+		) . '</div></div>';
+	}
+
+	private function get_current_directory_page() : int {
+		$page = absint( $_GET['paged'] ?? 0 );
+		if ( $page > 0 ) {
+			return $page;
+		}
+
+		$page = absint( $_GET['page'] ?? 0 );
+		if ( $page > 0 ) {
+			return $page;
+		}
+
+		$page = absint( get_query_var( 'paged' ) );
+		if ( $page > 0 ) {
+			return $page;
+		}
+
+		$page = absint( get_query_var( 'page' ) );
+		if ( $page > 0 ) {
+			return $page;
+		}
+
+		return 1;
+	}
+
+	private function get_current_directory_url() : string {
+		$request_uri = (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' );
+		$path = (string) wp_parse_url( $request_uri, PHP_URL_PATH );
+		return trailingslashit( home_url( '/' . ltrim( $path, '/' ) ) );
+	}
+
+	private function get_current_canonical_url() : string {
+		$request_uri = (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' );
+		$path = (string) wp_parse_url( $request_uri, PHP_URL_PATH );
+		$path = trailingslashit( '/' . ltrim( $path, '/' ) );
+
+		if ( get_query_var( 'maklaplace_chefs' ) ) {
+			return home_url( '/chefs/' );
+		}
+
+		if ( get_query_var( 'maklaplace_favorites' ) ) {
+			return home_url( '/favorites/' );
+		}
+
+		if ( get_query_var( 'maklaplace_order_entry' ) ) {
+			$args = array(
+				'chef_id' => absint( $_GET['chef_id'] ?? 0 ),
+				'step'    => sanitize_key( (string) ( $_GET['step'] ?? 'customer-details' ) ),
+			);
+
+			$item_id = absint( $_GET['item_id'] ?? 0 );
+			$quantity = absint( $_GET['quantity'] ?? 0 );
+			if ( $item_id > 0 ) {
+				$args['item_id'] = $item_id;
+			}
+			if ( $quantity > 0 ) {
+				$args['quantity'] = $quantity;
+			}
+			return add_query_arg( $args, home_url( '/order/' ) );
+		}
+
+		if ( '' !== (string) get_query_var( self::QUERY_VAR ) ) {
+			return home_url( $path );
+		}
+
+		return home_url( $path );
+	}
+
+	private function get_current_social_title( string $chef_slug ) : string {
+		if ( get_query_var( 'maklaplace_chefs' ) ) {
+			return __( 'Chefs', 'maklaplace' );
+		}
+
+		if ( get_query_var( 'maklaplace_favorites' ) ) {
+			return __( 'Favorites', 'maklaplace' );
+		}
+
+		if ( get_query_var( 'maklaplace_order_entry' ) ) {
+			return __( 'Start Order', 'maklaplace' );
+		}
+
+		if ( '' !== $chef_slug ) {
+			$chef = $this->get_chef_by_slug( $chef_slug );
+			if ( $chef instanceof WP_User ) {
+				return $this->get_chef_display_name( $chef->ID );
+			}
+		}
+
+		return get_bloginfo( 'name' );
+	}
+
+	private function output_structured_data() : void {
+		$chef_slug = (string) get_query_var( self::QUERY_VAR );
+		if ( '' === $chef_slug ) {
+			return;
+		}
+
+		$chef = $this->get_chef_by_slug( $chef_slug );
+		if ( ! $chef instanceof WP_User ) {
+			return;
+		}
+
+		$profile = $this->container->get( ChefProfileService::class )->get_profile( $chef->ID ) ?? array();
+		$reviews = $this->container->get( ChefReviewRepository::class )->get_stats( $chef->ID );
+		$structured = array(
+			'@context' => 'https://schema.org',
+			'@type'    => 'Restaurant',
+			'name'     => $this->get_chef_display_name( $chef->ID ),
+			'description' => (string) ( $profile[ ChefProfileKeys::BIO ] ?? '' ),
+			'address'  => array(
+				'@type'            => 'PostalAddress',
+				'addressLocality'   => (string) ( $profile[ ChefProfileKeys::CITY ] ?? '' ),
+				'addressRegion'     => (string) ( $profile[ ChefProfileKeys::WILAYA ] ?? '' ),
+			),
+			'aggregateRating' => array(
+				'@type'       => 'AggregateRating',
+				'ratingValue'  => (float) ( $reviews['average_rating'] ?? 0 ),
+				'reviewCount'  => (int) ( $reviews['total_reviews'] ?? 0 ),
+			),
+			'url' => home_url( '/chefs/' . $this->get_chef_slug( $chef->ID ) . '/' ),
+		);
+
+		echo '<script type="application/ld+json">' . wp_json_encode( $structured, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+	}
+
+	private function get_directory_query_args() : array {
+		$args = array(
+			's'           => sanitize_text_field( (string) ( $_GET['s'] ?? '' ) ),
+			'cuisine'     => sanitize_text_field( (string) ( $_GET['cuisine'] ?? '' ) ),
+			'city'        => sanitize_text_field( (string) ( $_GET['city'] ?? '' ) ),
+			'wilaya'      => sanitize_text_field( (string) ( $_GET['wilaya'] ?? '' ) ),
+			'availability' => sanitize_key( (string) ( $_GET['availability'] ?? '' ) ),
+			'sort'        => sanitize_key( (string) ( $_GET['sort'] ?? 'newest' ) ),
+		);
+
+		return array_filter(
+			$args,
+			static fn( string $value ) : bool => '' !== $value
+		);
 	}
 
 	private function render_document( string $content, string $title ) : void {
 		status_header( is_404() ? 404 : 200 );
 		echo '<!doctype html><html ' . get_language_attributes() . '><head><meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '"><meta name="viewport" content="width=device-width, initial-scale=1">';
 		echo '<title>' . esc_html( $title ) . '</title>';
+		remove_action( 'wp_head', '_wp_render_title_tag', 1 );
 		wp_head();
 		echo '</head><body>';
 		wp_body_open();
