@@ -80,6 +80,19 @@ final class OrderService {
 		$chef_user_id = (int) $payload['chef_user_id'];
 		$chef_profile_id = (int) $payload['chef_profile_id'];
 		$subtotal = $this->calculate_subtotal( $items );
+		$customer_snapshot = array(
+			'name'      => $payload['customer_name'],
+			'phone'     => $payload['customer_phone'],
+			'address'   => $payload['delivery_address'],
+			'notes'     => $payload['customer_notes'],
+			'user_id'   => $customer_user_id,
+		);
+		$pricing_snapshot = array(
+			'subtotal'      => $subtotal,
+			'total'         => $subtotal,
+			'currency'      => 'DA',
+			'payment_method'=> Validation::text( $data['payment_method'] ?? 'cash' ),
+		);
 
 		$record = array(
 			'id'                        => $this->next_id( $orders ),
@@ -93,13 +106,15 @@ final class OrderService {
 			OrderKeys::SUBTOTAL         => $subtotal,
 			OrderKeys::TOTAL_AMOUNT     => $subtotal,
 			OrderKeys::CURRENCY         => 'DA',
-			OrderKeys::PAYMENT_METHOD   => Validation::text( $data['payment_method'] ?? 'cash' ),
+			OrderKeys::PAYMENT_METHOD   => $pricing_snapshot['payment_method'],
 			OrderKeys::STATUS           => 'pending',
 			OrderKeys::CREATED_AT       => current_time( 'mysql' ),
 			OrderKeys::UPDATED_AT       => current_time( 'mysql' ),
 			OrderKeys::CUSTOMER_NOTES   => Validation::text( $payload['customer_notes'] ?? '' ),
 			OrderKeys::CHEF_NOTES       => '',
 			OrderKeys::SUBMISSION_HASH  => $hash,
+			'customer_snapshot'          => $customer_snapshot,
+			'pricing_snapshot'           => $pricing_snapshot,
 		);
 
 		$orders[ $record['id'] ] = $record;
@@ -292,22 +307,32 @@ final class OrderService {
 			$menu_id = absint( $item['menu_item_id'] ?? 0 );
 			$quantity = max( 1, absint( $item['quantity'] ?? 1 ) );
 			$menu_item = $this->menus->get_menu_item( $menu_id );
+			$price = isset( $item['price_snapshot'] ) ? (float) $item['price_snapshot'] : 0.0;
+			$title = (string) ( $item['title_snapshot'] ?? '' );
+			$category = (string) ( $item['category_snapshot'] ?? '' );
+			$cuisine_type = (string) ( $item['cuisine_type_snapshot'] ?? '' );
 
-			if ( ! is_array( $menu_item ) ) {
-				continue;
+			if ( $price <= 0.0 || '' === $title ) {
+				if ( ! is_array( $menu_item ) ) {
+					continue;
+				}
+
+				$price = (float) ( $menu_item[ MenuKeys::PRICE ] ?? 0 );
+				$title = (string) ( $menu_item[ MenuKeys::TITLE ] ?? '' );
+				$category = (string) ( $menu_item[ MenuKeys::CATEGORY ] ?? '' );
+				$cuisine_type = (string) ( $menu_item[ MenuKeys::CUISINE_TYPE ] ?? '' );
 			}
 
-			$price = (float) ( $menu_item[ MenuKeys::PRICE ] ?? 0 );
 			$total = $price * $quantity;
 
 			$snapshots[] = array(
 				'menu_item_id'   => $menu_id,
-				'item_name'      => (string) ( $menu_item[ MenuKeys::TITLE ] ?? '' ),
+				'item_name'      => $title,
 				'quantity'       => $quantity,
 				'price_snapshot' => $price,
 				'total'          => $total,
-				'category'       => $menu_item[ MenuKeys::CATEGORY ] ?? '',
-				'cuisine_type'   => $menu_item[ MenuKeys::CUISINE_TYPE ] ?? '',
+				'category'       => $category,
+				'cuisine_type'   => $cuisine_type,
 			);
 		}
 

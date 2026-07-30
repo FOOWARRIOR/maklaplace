@@ -7,6 +7,7 @@
 
 namespace MaklaPlace\Modules;
 
+use MaklaPlace\Core\CartService;
 use MaklaPlace\Core\OrderService;
 use MaklaPlace\Core\WalletService;
 use MaklaPlace\Core\Module;
@@ -25,6 +26,12 @@ final class OrdersModule extends Module {
 	 */
 	public function register_services() : void {
 		$this->container->singleton( WalletService::class, WalletService::class );
+		$this->container->singleton( CartService::class, static function ( \MaklaPlace\Core\Container $container ) {
+			return new CartService(
+				$container->get( \MaklaPlace\Core\MenuService::class ),
+				$container->get( \MaklaPlace\Core\ChefProfileService::class )
+			);
+		} );
 		$this->container->singleton( OrderService::class, OrderService::class );
 	}
 
