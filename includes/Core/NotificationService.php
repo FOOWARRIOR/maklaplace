@@ -96,6 +96,7 @@ final class NotificationService {
 	public function format_message( string $event_type, array $context = array() ) : string {
 		$templates = array(
 			'order_created'            => __( 'Your order has been received.', 'maklaplace' ),
+			'order_confirmed'          => __( 'Your order has been confirmed.', 'maklaplace' ),
 			'order_status_changed'     => __( 'Your order status has been updated.', 'maklaplace' ),
 			'order_completed'          => __( 'Your order has been completed.', 'maklaplace' ),
 			'order_cancelled'          => __( 'Your order has been cancelled.', 'maklaplace' ),

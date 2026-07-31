@@ -50,11 +50,29 @@ final class MarketplaceController {
 		add_shortcode( 'maklaplace_chef_menu', array( $this, 'render_menu_shortcode' ) );
 		add_shortcode( 'maklaplace_chef_reviews', array( $this, 'render_reviews_shortcode' ) );
 		add_shortcode( 'maklaplace_chef_favorites', array( $this, 'render_favorites_shortcode' ) );
+		add_shortcode( 'maklaplace_customer_dashboard', array( $this, 'render_customer_dashboard_shortcode' ) );
+		add_shortcode( 'maklaplace_customer_profile', array( $this, 'render_customer_profile_shortcode' ) );
+		add_shortcode( 'maklaplace_customer_addresses', array( $this, 'render_customer_addresses_shortcode' ) );
+		add_shortcode( 'maklaplace_customer_notifications', array( $this, 'render_customer_notifications_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
 		add_action( 'wp_head', array( $this, 'output_meta_description' ) );
 		add_action( 'elementor/widgets/register', array( $this, 'register_elementor_widgets' ) );
 		add_action( 'admin_post_maklaplace_checkout_submit', array( $this, 'handle_checkout_submit' ) );
 		add_action( 'admin_post_nopriv_maklaplace_checkout_submit', array( $this, 'handle_login_required' ) );
+		add_action( 'admin_post_maklaplace_confirm_order_received', array( $this, 'handle_confirm_order_received' ) );
+		add_action( 'admin_post_nopriv_maklaplace_confirm_order_received', array( $this, 'handle_login_required' ) );
+		add_action( 'admin_post_maklaplace_submit_order_review', array( $this, 'handle_submit_order_review' ) );
+		add_action( 'admin_post_nopriv_maklaplace_submit_order_review', array( $this, 'handle_login_required' ) );
+		add_action( 'admin_post_maklaplace_save_customer_address', array( $this, 'handle_save_customer_address' ) );
+		add_action( 'admin_post_nopriv_maklaplace_save_customer_address', array( $this, 'handle_login_required' ) );
+		add_action( 'admin_post_maklaplace_delete_customer_address', array( $this, 'handle_delete_customer_address' ) );
+		add_action( 'admin_post_nopriv_maklaplace_delete_customer_address', array( $this, 'handle_login_required' ) );
+		add_action( 'admin_post_maklaplace_set_default_customer_address', array( $this, 'handle_set_default_customer_address' ) );
+		add_action( 'admin_post_nopriv_maklaplace_set_default_customer_address', array( $this, 'handle_login_required' ) );
+		add_action( 'admin_post_maklaplace_save_customer_profile', array( $this, 'handle_save_customer_profile' ) );
+		add_action( 'admin_post_nopriv_maklaplace_save_customer_profile', array( $this, 'handle_login_required' ) );
+		add_action( 'admin_post_maklaplace_mark_notification_read', array( $this, 'handle_mark_notification_read' ) );
+		add_action( 'admin_post_nopriv_maklaplace_mark_notification_read', array( $this, 'handle_login_required' ) );
 		add_action( 'admin_post_maklaplace_add_favorite_chef', array( $this, 'handle_add_favorite' ) );
 		add_action( 'admin_post_nopriv_maklaplace_add_favorite_chef', array( $this, 'handle_login_required' ) );
 		add_action( 'admin_post_maklaplace_remove_favorite_chef', array( $this, 'handle_remove_favorite' ) );
@@ -69,6 +87,10 @@ final class MarketplaceController {
 		add_rewrite_rule( '^favorites/?$', 'index.php?post_type=page&maklaplace_favorites=1', 'top' );
 		add_rewrite_rule( '^checkout/?$', 'index.php?post_type=page&maklaplace_checkout=1', 'top' );
 		add_rewrite_rule( '^orders/?$', 'index.php?post_type=page&maklaplace_orders=1', 'top' );
+		add_rewrite_rule( '^dashboard/?$', 'index.php?post_type=page&maklaplace_dashboard=1', 'top' );
+		add_rewrite_rule( '^profile/?$', 'index.php?post_type=page&maklaplace_profile=1', 'top' );
+		add_rewrite_rule( '^addresses/?$', 'index.php?post_type=page&maklaplace_addresses=1', 'top' );
+		add_rewrite_rule( '^notifications/?$', 'index.php?post_type=page&maklaplace_notifications=1', 'top' );
 		add_rewrite_rule( '^order-confirmation/?$', 'index.php?post_type=page&maklaplace_order_confirmation=1', 'top' );
 		add_rewrite_rule( '^order/?$', 'index.php?post_type=page&maklaplace_order_entry=1', 'top' );
 	}
@@ -78,6 +100,10 @@ final class MarketplaceController {
 		$vars[] = 'maklaplace_favorites';
 		$vars[] = 'maklaplace_checkout';
 		$vars[] = 'maklaplace_orders';
+		$vars[] = 'maklaplace_dashboard';
+		$vars[] = 'maklaplace_profile';
+		$vars[] = 'maklaplace_addresses';
+		$vars[] = 'maklaplace_notifications';
 		$vars[] = 'maklaplace_order_confirmation';
 		$vars[] = 'maklaplace_order_entry';
 		$vars[] = self::QUERY_VAR;
@@ -103,6 +129,26 @@ final class MarketplaceController {
 
 		if ( 'orders' === $path ) {
 			$this->render_orders_route();
+			exit;
+		}
+
+		if ( 'dashboard' === $path ) {
+			$this->render_customer_dashboard_route();
+			exit;
+		}
+
+		if ( 'profile' === $path ) {
+			$this->render_customer_profile_route();
+			exit;
+		}
+
+		if ( 'addresses' === $path ) {
+			$this->render_customer_addresses_route();
+			exit;
+		}
+
+		if ( 'notifications' === $path ) {
+			$this->render_customer_notifications_route();
 			exit;
 		}
 
@@ -146,6 +192,22 @@ final class MarketplaceController {
 
 		if ( get_query_var( 'maklaplace_orders' ) ) {
 			$parts['title'] = __( 'My Orders', 'maklaplace' );
+		}
+
+		if ( get_query_var( 'maklaplace_dashboard' ) ) {
+			$parts['title'] = __( 'Customer Dashboard', 'maklaplace' );
+		}
+
+		if ( get_query_var( 'maklaplace_profile' ) ) {
+			$parts['title'] = __( 'Profile', 'maklaplace' );
+		}
+
+		if ( get_query_var( 'maklaplace_addresses' ) ) {
+			$parts['title'] = __( 'Addresses', 'maklaplace' );
+		}
+
+		if ( get_query_var( 'maklaplace_notifications' ) ) {
+			$parts['title'] = __( 'Notifications', 'maklaplace' );
 		}
 
 		if ( get_query_var( 'maklaplace_order_confirmation' ) ) {
@@ -194,6 +256,14 @@ final class MarketplaceController {
 			$description = __( 'Review your cart and enter delivery details before placing your order.', 'maklaplace' );
 		} elseif ( (bool) get_query_var( 'maklaplace_orders' ) ) {
 			$description = __( 'View and search your past MaklaPlace orders.', 'maklaplace' );
+		} elseif ( (bool) get_query_var( 'maklaplace_dashboard' ) ) {
+			$description = __( 'Manage your orders, favorites, reviews, and saved addresses on MaklaPlace.', 'maklaplace' );
+		} elseif ( (bool) get_query_var( 'maklaplace_profile' ) ) {
+			$description = __( 'Update your profile details, password, and default delivery address on MaklaPlace.', 'maklaplace' );
+		} elseif ( (bool) get_query_var( 'maklaplace_addresses' ) ) {
+			$description = __( 'Add, edit, delete, and manage your saved delivery addresses on MaklaPlace.', 'maklaplace' );
+		} elseif ( (bool) get_query_var( 'maklaplace_notifications' ) ) {
+			$description = __( 'View your latest order and platform notifications on MaklaPlace.', 'maklaplace' );
 		} elseif ( (bool) get_query_var( 'maklaplace_order_confirmation' ) ) {
 			$description = __( 'Review your order confirmation details on MaklaPlace.', 'maklaplace' );
 		} elseif ( '' !== $chef_slug ) {
@@ -239,7 +309,8 @@ final class MarketplaceController {
 		}
 
 		$chef_ids = $this->get_favorite_chefs( get_current_user_id() );
-		$html = '<div class="maklaplace-grid">';
+		$html = '<div class="maklaplace-panel"><div class="maklaplace-page-actions"><p>' . esc_html__( 'Manage your saved chefs here.', 'maklaplace' ) . '</p><a class="button" href="' . esc_url( home_url( '/chefs/' ) ) . '">' . esc_html__( 'Browse Chefs', 'maklaplace' ) . '</a></div></div>';
+		$html .= '<div class="maklaplace-grid">';
 		if ( empty( $chef_ids ) ) {
 			return $html . '<div class="maklaplace-panel">' . esc_html__( 'No favorite chefs yet.', 'maklaplace' ) . '</div></div>';
 		}
@@ -249,6 +320,38 @@ final class MarketplaceController {
 		}
 
 		return $html . '</div>';
+	}
+
+	public function render_customer_dashboard_shortcode() : string {
+		if ( ! is_user_logged_in() ) {
+			return '<div class="maklaplace-panel">' . esc_html__( 'Log in to view your dashboard.', 'maklaplace' ) . '</div>';
+		}
+
+		return $this->render_customer_dashboard();
+	}
+
+	public function render_customer_profile_shortcode() : string {
+		if ( ! is_user_logged_in() ) {
+			return '<div class="maklaplace-panel">' . esc_html__( 'Log in to manage your profile.', 'maklaplace' ) . '</div>';
+		}
+
+		return $this->render_customer_profile();
+	}
+
+	public function render_customer_addresses_shortcode() : string {
+		if ( ! is_user_logged_in() ) {
+			return '<div class="maklaplace-panel">' . esc_html__( 'Log in to manage addresses.', 'maklaplace' ) . '</div>';
+		}
+
+		return $this->render_customer_addresses();
+	}
+
+	public function render_customer_notifications_shortcode() : string {
+		if ( ! is_user_logged_in() ) {
+			return '<div class="maklaplace-panel">' . esc_html__( 'Log in to view notifications.', 'maklaplace' ) . '</div>';
+		}
+
+		return $this->render_customer_notifications();
 	}
 
 	public function register_elementor_widgets( $widgets_manager ) : void {
@@ -272,6 +375,10 @@ final class MarketplaceController {
 		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefReviewsWidget() );
 		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefFavoritesWidget() );
 		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\ChefReviewsListWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\CustomerDashboardWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\CustomerProfileWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\CustomerAddressesWidget() );
+		$widgets_manager->register( new \MaklaPlace\PublicArea\Widgets\CustomerNotificationsWidget() );
 	}
 
 	public function handle_add_favorite() : void {
@@ -336,6 +443,18 @@ final class MarketplaceController {
 		$this->render_document( $content, __( 'Favorites', 'maklaplace' ) );
 	}
 
+	private function render_customer_dashboard_route() : void {
+		$this->render_document( $this->render_customer_dashboard(), __( 'Customer Dashboard', 'maklaplace' ) );
+	}
+
+	private function render_customer_profile_route() : void {
+		$this->render_document( $this->render_customer_profile(), __( 'Profile', 'maklaplace' ) );
+	}
+
+	private function render_customer_addresses_route() : void {
+		$this->render_document( $this->render_customer_addresses(), __( 'Addresses', 'maklaplace' ) );
+	}
+
 	private function render_checkout_route() : void {
 		$this->render_document( $this->render_checkout_page(), __( 'Checkout', 'maklaplace' ) );
 	}
@@ -354,18 +473,13 @@ final class MarketplaceController {
 
 		if ( $order_id > 0 ) {
 			$order = $order_service->get_order( $order_id );
-			if ( is_array( $order ) && (int) ( $order[ OrderKeys::CUSTOMER_USER_ID ] ?? 0 ) === $customer_id ) {
+			if ( is_array( $order ) && $order_service->can_view_order( $customer_id, $order ) ) {
 				$this->render_document( $this->render_order_details_panel( $order ), __( 'Order Details', 'maklaplace' ) );
 				return;
 			}
 		}
 
-		$orders = array_values(
-			array_filter(
-				$order_service->get_orders_by_customer( $customer_id ),
-				static fn( array $order ) : bool => (int) ( $order[ OrderKeys::CUSTOMER_USER_ID ] ?? 0 ) === $customer_id
-			)
-		);
+		$orders = $order_service->get_visible_orders_for_actor( $customer_id );
 
 		$orders = array_values(
 			array_filter(
@@ -378,7 +492,7 @@ final class MarketplaceController {
 					if ( '' !== $search ) {
 						$haystack = strtolower(
 							(string) ( $order[ OrderKeys::CUSTOMER_NAME ] ?? '' ) . ' ' .
-							(string) ( $order[ OrderKeys::CHEF_USER_ID ] ?? '' ) . ' ' .
+							(string) ( $this->get_chef_display_name( (int) ( $order[ OrderKeys::CHEF_USER_ID ] ?? 0 ) ) ) . ' ' .
 							(string) ( $order[ OrderKeys::TOTAL_AMOUNT ] ?? '' ) . ' ' .
 							(string) ( $order[ OrderKeys::STATUS ] ?? '' ) . ' ' .
 							(string) ( $order[ OrderKeys::SUBMISSION_HASH ] ?? '' )
@@ -440,6 +554,120 @@ final class MarketplaceController {
 		$this->render_document( $content, __( 'My Orders', 'maklaplace' ) );
 	}
 
+	private function render_customer_dashboard() : string {
+		$this->require_customer_access();
+
+		$user_id = get_current_user_id();
+		$order_service = $this->container->get( OrderService::class );
+		$orders = $order_service->get_orders_by_customer( $user_id );
+		$favorites = $this->get_favorite_chefs( $user_id );
+		$addresses = $this->get_saved_addresses( $user_id );
+		$recent_orders = array_slice(
+			$this->sort_orders_by_date( $orders, 'desc' ),
+			0,
+			5
+		);
+		$active_orders = count(
+			array_filter(
+				$orders,
+				static fn( array $order ) : bool => in_array( (string) ( $order[ OrderKeys::STATUS ] ?? '' ), array( 'pending', 'accepted', 'preparing', 'ready', 'on_the_way' ), true )
+			)
+		);
+		$completed_orders = count(
+			array_filter(
+				$orders,
+				static fn( array $order ) : bool => 'completed' === (string) ( $order[ OrderKeys::STATUS ] ?? '' )
+			)
+		);
+		$pending_reviews = $this->count_pending_reviews( $user_id, $orders );
+
+		$content = '<div class="wrap maklaplace-public-marketplace"><div class="maklaplace-page-actions"><h1>' . esc_html__( 'Customer Dashboard', 'maklaplace' ) . '</h1><a class="button" href="' . esc_url( home_url( '/chefs/' ) ) . '">' . esc_html__( 'Browse Chefs', 'maklaplace' ) . '</a></div>';
+		$content .= '<div class="maklaplace-grid maklaplace-dashboard-grid">';
+		$content .= $this->render_dashboard_card( __( 'Active Orders', 'maklaplace' ), number_format_i18n( $active_orders ), __( 'Orders currently in progress.', 'maklaplace' ) );
+		$content .= $this->render_dashboard_card( __( 'Recent Orders', 'maklaplace' ), number_format_i18n( count( $recent_orders ) ), __( 'Latest orders placed.', 'maklaplace' ) );
+		$content .= $this->render_dashboard_card( __( 'Favorite Chefs', 'maklaplace' ), number_format_i18n( count( $favorites ) ), __( 'Saved chefs you can revisit.', 'maklaplace' ) );
+		$content .= $this->render_dashboard_card( __( 'Completed Orders', 'maklaplace' ), number_format_i18n( $completed_orders ), __( 'Orders marked completed.', 'maklaplace' ) );
+		$content .= $this->render_dashboard_card( __( 'Pending Reviews', 'maklaplace' ), number_format_i18n( $pending_reviews ), __( 'Completed orders without a review yet.', 'maklaplace' ) );
+		$content .= $this->render_dashboard_card( __( 'Saved Addresses', 'maklaplace' ), number_format_i18n( count( $addresses ) ), __( 'Stored delivery addresses.', 'maklaplace' ) );
+		$content .= '</div>';
+		$content .= $this->render_dashboard_recent_orders( $recent_orders );
+		$content .= $this->render_dashboard_favorites_preview( $favorites );
+		$content .= $this->render_dashboard_addresses_preview( $addresses );
+		$content .= '<div class="maklaplace-panel"><div class="maklaplace-page-actions"><h2>' . esc_html__( 'Profile', 'maklaplace' ) . '</h2><a class="button button-primary" href="' . esc_url( home_url( '/profile/' ) ) . '">' . esc_html__( 'Edit Profile', 'maklaplace' ) . '</a></div><p class="maklaplace-meta">' . esc_html__( 'Update your name, phone number, email, password, and default delivery address.', 'maklaplace' ) . '</p></div>';
+		$content .= '</div>';
+
+		return $content;
+	}
+
+	private function render_customer_profile() : string {
+		$this->require_customer_access();
+
+		$user = wp_get_current_user();
+		$user_id = get_current_user_id();
+		$addresses = $this->get_saved_addresses_data( $user_id );
+		$default_address = (string) get_user_meta( $user_id, UserMeta::CUSTOMER_DEFAULT_ADDRESS, true );
+
+		$content = '<div class="wrap maklaplace-public-marketplace"><div class="maklaplace-page-actions"><h1>' . esc_html__( 'Profile', 'maklaplace' ) . '</h1><a class="button" href="' . esc_url( home_url( '/dashboard/' ) ) . '">' . esc_html__( 'Back to Dashboard', 'maklaplace' ) . '</a></div>';
+		$content .= '<div class="maklaplace-panel"><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="maklaplace-order-form">';
+		$content .= wp_nonce_field( 'maklaplace_save_customer_profile', 'maklaplace_nonce', true, false );
+		$content .= '<input type="hidden" name="action" value="maklaplace_save_customer_profile">';
+		$content .= '<div class="maklaplace-grid">';
+		$content .= '<label><strong>' . esc_html__( 'Name', 'maklaplace' ) . '</strong><br><input type="text" name="display_name" value="' . esc_attr( $user->display_name ) . '" required></label>';
+		$content .= '<label><strong>' . esc_html__( 'Phone Number', 'maklaplace' ) . '</strong><br><input type="text" name="customer_phone" value="' . esc_attr( (string) get_user_meta( $user_id, UserMeta::CUSTOMER_PHONE_NUMBER, true ) ) . '"></label>';
+		$content .= '<label><strong>' . esc_html__( 'Email', 'maklaplace' ) . '</strong><br><input type="email" name="user_email" value="' . esc_attr( $user->user_email ) . '" required></label>';
+		$content .= '<label><strong>' . esc_html__( 'New Password', 'maklaplace' ) . '</strong><br><input type="password" name="new_password" autocomplete="new-password" placeholder="' . esc_attr__( 'Leave blank to keep current password', 'maklaplace' ) . '"></label>';
+		$content .= '<label><strong>' . esc_html__( 'Confirm Password', 'maklaplace' ) . '</strong><br><input type="password" name="confirm_password" autocomplete="new-password"></label>';
+		$content .= '<label style="grid-column:1/-1"><strong>' . esc_html__( 'Default Delivery Address', 'maklaplace' ) . '</strong><br><select name="default_address_id">';
+		$content .= '<option value="">' . esc_html__( 'Select a default address', 'maklaplace' ) . '</option>';
+		foreach ( $addresses as $address ) {
+			$content .= '<option value="' . esc_attr( (string) ( $address['id'] ?? '' ) ) . '"' . selected( $default_address, (string) ( $address['address'] ?? '' ), false ) . '>' . esc_html( $this->format_saved_address_label( $address ) ) . ' - ' . esc_html( (string) ( $address['address'] ?? '' ) ) . '</option>';
+		}
+		$content .= '</select></label>';
+		$content .= '</div>';
+		$content .= '<p><button type="submit" class="button button-primary">' . esc_html__( 'Save Profile', 'maklaplace' ) . '</button></p>';
+		$content .= '</form></div></div>';
+
+		return $content;
+	}
+
+	private function render_customer_addresses() : string {
+		$this->require_customer_access();
+
+		$user_id = get_current_user_id();
+		$addresses = $this->get_saved_addresses_data( $user_id );
+		$default_address = $this->get_default_saved_address( $addresses );
+		$editing_address_id = sanitize_key( (string) ( $_GET['edit_address_id'] ?? '' ) );
+		$editing_address = '' !== $editing_address_id && isset( $addresses[ $editing_address_id ] ) ? $addresses[ $editing_address_id ] : array();
+
+		$content = '<div class="wrap maklaplace-public-marketplace"><div class="maklaplace-page-actions"><h1>' . esc_html__( 'Addresses', 'maklaplace' ) . '</h1><a class="button button-primary" href="#maklaplace-add-address">' . esc_html__( 'Add Address', 'maklaplace' ) . '</a></div>';
+		$content .= '<div class="maklaplace-panel"><p>' . esc_html__( 'Saved addresses can be reused during checkout.', 'maklaplace' ) . '</p></div>';
+		$content .= '<div class="maklaplace-panel" id="maklaplace-add-address"><h2>' . esc_html__( 'Add Address', 'maklaplace' ) . '</h2>';
+		$content .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="maklaplace-order-form">';
+		$content .= wp_nonce_field( 'maklaplace_save_customer_address', 'maklaplace_nonce', true, false );
+		$content .= '<input type="hidden" name="action" value="maklaplace_save_customer_address">';
+		$content .= '<input type="hidden" name="address_id" value="' . esc_attr( $editing_address_id ) . '">';
+		$content .= '<p><label><strong>' . esc_html__( 'Label', 'maklaplace' ) . '</strong><br><input type="text" name="label" class="regular-text" placeholder="' . esc_attr__( 'Home', 'maklaplace' ) . '" value="' . esc_attr( (string) ( $editing_address['label'] ?? '' ) ) . '"></label></p>';
+		$content .= '<p><label><strong>' . esc_html__( 'Address', 'maklaplace' ) . '</strong><br><textarea name="address" rows="4" class="large-text" required>' . esc_textarea( (string) ( $editing_address['address'] ?? '' ) ) . '</textarea></label></p>';
+		$content .= '<p><label><input type="checkbox" name="is_default" value="1"' . checked( ! empty( $editing_address['is_default'] ), true, false ) . '> ' . esc_html__( 'Set as default address', 'maklaplace' ) . '</label></p>';
+		$content .= '<p><button type="submit" class="button button-primary">' . esc_html__( '' !== $editing_address_id ? 'Update Address' : 'Save Address', 'maklaplace' ) . '</button></p>';
+		if ( '' !== $editing_address_id ) {
+			$content .= '<p><a class="button" href="' . esc_url( home_url( '/addresses/' ) ) . '">' . esc_html__( 'Cancel Edit', 'maklaplace' ) . '</a></p>';
+		}
+		$content .= '</form></div>';
+
+		if ( empty( $addresses ) ) {
+			return $content . '<div class="maklaplace-panel"><p>' . esc_html__( 'No saved addresses yet.', 'maklaplace' ) . '</p></div></div>';
+		}
+
+		$content .= '<div class="maklaplace-grid">';
+		foreach ( $addresses as $address ) {
+		$content .= $this->render_saved_address_card( $address, $default_address );
+		}
+		$content .= '</div></div>';
+
+		return $content;
+	}
+
 	private function render_order_summary_card( array $order ) : string {
 		$order_id = absint( $order['id'] ?? 0 );
 		$status = (string) ( $order[ OrderKeys::STATUS ] ?? 'pending' );
@@ -447,6 +675,7 @@ final class MarketplaceController {
 		$items = (array) ( $order[ OrderKeys::ITEMS ] ?? array() );
 		$chef_id = (int) ( $order[ OrderKeys::CHEF_USER_ID ] ?? 0 );
 		$chef_name = $chef_id > 0 ? $this->get_chef_display_name( $chef_id ) : '';
+		$order_date = (string) ( $order[ OrderKeys::CREATED_AT ] ?? '' );
 
 		$html = '<article class="maklaplace-card">';
 		$html .= '<h2>#' . esc_html( number_format_i18n( $order_id ) ) . '</h2>';
@@ -454,29 +683,360 @@ final class MarketplaceController {
 		$html .= '<p><strong>' . esc_html__( 'Status:', 'maklaplace' ) . '</strong> <span class="maklaplace-status-badge maklaplace-status-' . esc_attr( sanitize_key( $status ) ) . '">' . esc_html( ucfirst( $status ) ) . '</span></p>';
 		$html .= '<p><strong>' . esc_html__( 'Total:', 'maklaplace' ) . '</strong> ' . esc_html( number_format_i18n( $total ) ) . ' ' . esc_html( (string) ( $order[ OrderKeys::CURRENCY ] ?? 'DA' ) ) . '</p>';
 		$html .= '<p><strong>' . esc_html__( 'Items:', 'maklaplace' ) . '</strong> ' . esc_html( number_format_i18n( count( $items ) ) ) . '</p>';
+		$html .= '<p><strong>' . esc_html__( 'Order Date:', 'maklaplace' ) . '</strong> ' . esc_html( $order_date ) . '</p>';
 		$html .= '<p><a class="button button-primary" href="' . esc_url( add_query_arg( array( 'order_id' => $order_id ), home_url( '/orders/' ) ) ) . '">' . esc_html__( 'View Details', 'maklaplace' ) . '</a></p>';
 		$html .= '</article>';
 
 		return $html;
 	}
 
+	private function render_dashboard_card( string $title, string $value, string $description ) : string {
+		return '<article class="maklaplace-card maklaplace-dashboard-card"><h2>' . esc_html( $title ) . '</h2><strong style="font-size:28px;line-height:1.1">' . esc_html( $value ) . '</strong><p class="maklaplace-meta">' . esc_html( $description ) . '</p></article>';
+	}
+
+	private function render_dashboard_recent_orders( array $orders ) : string {
+		$html = '<div class="maklaplace-panel"><h2>' . esc_html__( 'Recent Orders', 'maklaplace' ) . '</h2>';
+		if ( empty( $orders ) ) {
+			return $html . '<p>' . esc_html__( 'No orders found.', 'maklaplace' ) . '</p></div>';
+		}
+
+		$html .= '<div class="maklaplace-grid maklaplace-order-card-grid">';
+		foreach ( $orders as $order ) {
+			$html .= $this->render_order_summary_card( $order );
+		}
+		$html .= '</div></div>';
+
+		return $html;
+	}
+
+	private function render_dashboard_favorites_preview( array $chef_ids ) : string {
+		$html = '<div class="maklaplace-panel"><h2>' . esc_html__( 'Favorite Chefs', 'maklaplace' ) . '</h2>';
+		if ( empty( $chef_ids ) ) {
+			return $html . '<p>' . esc_html__( 'No favorite chefs saved yet.', 'maklaplace' ) . '</p></div>';
+		}
+
+		$html .= '<div class="maklaplace-grid maklaplace-order-card-grid">';
+		foreach ( array_slice( $chef_ids, 0, 4 ) as $chef_id ) {
+			$html .= $this->render_chef_card( (int) $chef_id, true );
+		}
+		$html .= '</div><p><a class="button" href="' . esc_url( home_url( '/favorites/' ) ) . '">' . esc_html__( 'View Favorites', 'maklaplace' ) . '</a></p></div>';
+
+		return $html;
+	}
+
+	private function render_dashboard_addresses_preview( array $addresses ) : string {
+		$html = '<div class="maklaplace-panel"><h2>' . esc_html__( 'Saved Addresses', 'maklaplace' ) . '</h2>';
+		if ( empty( $addresses ) ) {
+			return $html . '<p>' . esc_html__( 'No saved addresses yet.', 'maklaplace' ) . '</p></div>';
+		}
+
+		$html .= '<ul style="margin:0;padding-left:18px">';
+		foreach ( array_slice( $addresses, 0, 5 ) as $address ) {
+			$html .= '<li>' . esc_html( (string) $address ) . '</li>';
+		}
+		$html .= '</ul></div>';
+
+		return $html;
+	}
+
+	private function sort_orders_by_date( array $orders, string $direction = 'desc' ) : array {
+		usort(
+			$orders,
+			static function ( array $left, array $right ) use ( $direction ) : int {
+				$cmp = strcmp( (string) ( $left[ OrderKeys::CREATED_AT ] ?? '' ), (string) ( $right[ OrderKeys::CREATED_AT ] ?? '' ) );
+				return 'asc' === $direction ? $cmp : -$cmp;
+			}
+		);
+
+		return $orders;
+	}
+
+	private function get_saved_addresses( int $user_id ) : array {
+		$addresses = $this->get_saved_addresses_data( $user_id );
+
+		return array_values(
+			array_filter(
+				array_map(
+					static fn( array $address ) : string => trim( (string) ( $address['address'] ?? '' ) ),
+					$addresses
+				)
+			)
+		);
+	}
+
+	private function get_saved_addresses_data( int $user_id ) : array {
+		$addresses = get_user_meta( $user_id, UserMeta::CUSTOMER_SAVED_ADDRESSES, true );
+		if ( ! is_array( $addresses ) || empty( $addresses ) ) {
+			return array();
+		}
+
+		$normalized = array();
+		foreach ( $addresses as $key => $address ) {
+			if ( is_string( $address ) ) {
+				$address_id = is_string( $key ) && '' !== $key ? sanitize_key( $key ) : 'addr_' . substr( md5( $address ), 0, 8 );
+				$normalized[ $address_id ] = array(
+					'id'         => $address_id,
+					'label'      => '',
+					'address'    => trim( $address ),
+					'is_default' => false,
+					'updated_at' => '',
+				);
+				continue;
+			}
+
+			if ( ! is_array( $address ) ) {
+				continue;
+			}
+
+			$address_id = sanitize_key( (string) ( $address['id'] ?? ( is_string( $key ) ? $key : '' ) ) );
+			if ( '' === $address_id ) {
+				$address_id = 'addr_' . wp_generate_password( 8, false, false );
+			}
+
+			$normalized[ $address_id ] = array(
+				'id'         => $address_id,
+				'label'      => sanitize_text_field( (string) ( $address['label'] ?? '' ) ),
+				'address'    => sanitize_textarea_field( (string) ( $address['address'] ?? '' ) ),
+				'is_default' => ! empty( $address['is_default'] ),
+				'updated_at' => sanitize_text_field( (string) ( $address['updated_at'] ?? '' ) ),
+			);
+		}
+
+		return $normalized;
+	}
+
+	private function save_customer_addresses( int $user_id, array $addresses ) : void {
+		$normalized = array();
+		$default_address = '';
+
+		foreach ( $addresses as $address_id => $address ) {
+			if ( ! is_array( $address ) ) {
+				continue;
+			}
+
+			$address_id = sanitize_key( (string) $address_id );
+			$address_text = sanitize_textarea_field( (string) ( $address['address'] ?? '' ) );
+			if ( '' === $address_id || '' === trim( $address_text ) ) {
+				continue;
+			}
+
+			$is_default = ! empty( $address['is_default'] );
+			$normalized[ $address_id ] = array(
+				'id'         => $address_id,
+				'label'      => sanitize_text_field( (string) ( $address['label'] ?? '' ) ),
+				'address'    => $address_text,
+				'is_default' => $is_default,
+				'updated_at' => sanitize_text_field( (string) ( $address['updated_at'] ?? current_time( 'mysql' ) ) ),
+			);
+
+			if ( $is_default ) {
+				$default_address = $address_text;
+			}
+		}
+
+		if ( '' === $default_address && ! empty( $normalized ) ) {
+			$first_key = array_key_first( $normalized );
+			if ( null !== $first_key ) {
+				$normalized[ $first_key ]['is_default'] = true;
+				$default_address = (string) $normalized[ $first_key ]['address'];
+			}
+		}
+
+		update_user_meta( $user_id, UserMeta::CUSTOMER_SAVED_ADDRESSES, $normalized );
+		update_user_meta( $user_id, UserMeta::CUSTOMER_DEFAULT_ADDRESS, $default_address );
+	}
+
+	private function get_default_saved_address( array $addresses ) : array {
+		foreach ( $addresses as $address ) {
+			if ( ! empty( $address['is_default'] ) ) {
+				return $address;
+			}
+		}
+
+		return array();
+	}
+
+	private function render_saved_address_card( array $address, array $default_address ) : string {
+		$address_id = (string) ( $address['id'] ?? '' );
+		$is_default = ! empty( $address['is_default'] ) || ( ! empty( $default_address ) && $address_id === (string) ( $default_address['id'] ?? '' ) );
+		$label = $this->format_saved_address_label( $address );
+
+		$html = '<article class="maklaplace-card">';
+		$html .= '<h2>' . esc_html( $label ) . '</h2>';
+		$html .= '<p>' . esc_html( (string) ( $address['address'] ?? '' ) ) . '</p>';
+		if ( $is_default ) {
+			$html .= '<p><span class="maklaplace-chip">' . esc_html__( 'Default', 'maklaplace' ) . '</span></p>';
+		}
+		$html .= '<div class="maklaplace-actions">';
+		$html .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		$html .= wp_nonce_field( 'maklaplace_set_default_customer_address', 'maklaplace_nonce', true, false );
+		$html .= '<input type="hidden" name="action" value="maklaplace_set_default_customer_address">';
+		$html .= '<input type="hidden" name="address_id" value="' . esc_attr( $address_id ) . '">';
+		$html .= '<button type="submit" class="button">' . esc_html__( 'Set Default', 'maklaplace' ) . '</button>';
+		$html .= '</form>';
+		$html .= '<a class="button" href="' . esc_url( add_query_arg( array( 'edit_address_id' => $address_id ), home_url( '/addresses/' ) ) . '#maklaplace-add-address' ) . '">' . esc_html__( 'Edit', 'maklaplace' ) . '</a>';
+		$html .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(\'' . esc_js( __( 'Delete this address?', 'maklaplace' ) ) . '\');">';
+		$html .= wp_nonce_field( 'maklaplace_delete_customer_address', 'maklaplace_nonce', true, false );
+		$html .= '<input type="hidden" name="action" value="maklaplace_delete_customer_address">';
+		$html .= '<input type="hidden" name="address_id" value="' . esc_attr( $address_id ) . '">';
+		$html .= '<button type="submit" class="button button-link-delete">' . esc_html__( 'Delete', 'maklaplace' ) . '</button>';
+		$html .= '</form>';
+		$html .= '</div></article>';
+
+		return $html;
+	}
+
+	private function format_saved_address_label( array $address ) : string {
+		$label = trim( (string) ( $address['label'] ?? '' ) );
+		if ( '' !== $label ) {
+			return $label;
+		}
+
+		return __( 'Saved Address', 'maklaplace' );
+	}
+
+	private function count_pending_reviews( int $customer_id, array $orders ) : int {
+		$completed_orders = array_values(
+			array_filter(
+				$orders,
+				static fn( array $order ) : bool => 'completed' === (string) ( $order[ OrderKeys::STATUS ] ?? '' )
+			)
+		);
+
+		if ( empty( $completed_orders ) ) {
+			return 0;
+		}
+
+		$reviews = $this->container->get( ChefReviewRepository::class )->get_all();
+		$reviewed_order_ids = array();
+		$reviewed_by_order = false;
+		foreach ( $reviews as $review ) {
+			if ( isset( $review['order_id'] ) ) {
+				$reviewed_by_order = true;
+				$reviewed_order_ids[ absint( $review['order_id'] ) ] = true;
+			}
+		}
+
+		if ( $reviewed_by_order ) {
+			return count(
+				array_filter(
+					$completed_orders,
+					static fn( array $order ) : bool => ! isset( $reviewed_order_ids[ absint( $order['id'] ?? 0 ) ] )
+				)
+			);
+		}
+
+		return 0;
+	}
+
 	private function render_order_details_panel( array $order ) : string {
 		$order_id = absint( $order['id'] ?? 0 );
 		$chef_id = (int) ( $order[ OrderKeys::CHEF_USER_ID ] ?? 0 );
 		$chef_name = $chef_id > 0 ? $this->get_chef_display_name( $chef_id ) : __( 'Unknown', 'maklaplace' );
+		$order_date = (string) ( $order[ OrderKeys::CREATED_AT ] ?? '' );
+		$review_eligible = $this->container->get( OrderService::class )->can_customer_review_order( $order );
+		$existing_review = $this->container->get( ChefReviewRepository::class )->get_by_order( $order_id );
 		$content = '<div class="wrap maklaplace-public-marketplace"><h1>' . esc_html__( 'Order Details', 'maklaplace' ) . '</h1><div class="maklaplace-panel">';
 		$content .= '<p><strong>' . esc_html__( 'Order Number:', 'maklaplace' ) . '</strong> ' . esc_html( number_format_i18n( $order_id ) ) . '</p>';
 		$content .= '<p><strong>' . esc_html__( 'Status:', 'maklaplace' ) . '</strong> <span class="maklaplace-status-badge maklaplace-status-' . esc_attr( sanitize_key( (string) ( $order[ OrderKeys::STATUS ] ?? 'pending' ) ) ) . '">' . esc_html( ucfirst( (string) ( $order[ OrderKeys::STATUS ] ?? 'pending' ) ) ) . '</span></p>';
 		$content .= '<p><strong>' . esc_html__( 'Chef:', 'maklaplace' ) . '</strong> ' . esc_html( $chef_name ) . '</p>';
 		$content .= '<p><strong>' . esc_html__( 'Total:', 'maklaplace' ) . '</strong> ' . esc_html( number_format_i18n( (float) ( $order[ OrderKeys::TOTAL_AMOUNT ] ?? 0 ) ) ) . ' ' . esc_html( (string) ( $order[ OrderKeys::CURRENCY ] ?? 'DA' ) ) . '</p>';
+		$content .= '<p><strong>' . esc_html__( 'Order Date:', 'maklaplace' ) . '</strong> ' . esc_html( $order_date ) . '</p>';
 		$content .= '<h2>' . esc_html__( 'Products', 'maklaplace' ) . '</h2><ul>';
 		foreach ( (array) ( $order[ OrderKeys::ITEMS ] ?? array() ) as $item ) {
-			$content .= '<li>' . esc_html( (string) ( $item['item_name'] ?? '' ) ) . ' x ' . esc_html( number_format_i18n( (int) ( $item['quantity'] ?? 0 ) ) ) . '</li>';
+			$content .= '<li>' . esc_html( (string) ( $item['item_name'] ?? '' ) ) . ' x ' . esc_html( number_format_i18n( (int) ( $item['quantity'] ?? 0 ) ) ) . ' - ' . esc_html( number_format_i18n( (float) ( $item['total'] ?? 0 ) ) ) . ' ' . esc_html( (string) ( $order[ OrderKeys::CURRENCY ] ?? 'DA' ) ) . '</li>';
 		}
-		$content .= '</ul><p><a class="button" href="' . esc_url( home_url( '/orders/' ) ) . '">' . esc_html__( 'Back to Orders', 'maklaplace' ) . '</a></p>';
+		$content .= '</ul><h2>' . esc_html__( 'Tracking', 'maklaplace' ) . '</h2>';
+		$content .= $this->render_customer_order_timeline( (string) ( $order[ OrderKeys::STATUS ] ?? 'pending' ) );
+		if ( 'completed' === (string) ( $order[ OrderKeys::STATUS ] ?? '' ) ) {
+			$content .= '<h2>' . esc_html__( 'Order Confirmation', 'maklaplace' ) . '</h2>';
+			if ( ! empty( $order[ OrderKeys::CUSTOMER_RECEIVED_CONFIRMED ] ) ) {
+				$content .= '<p>' . esc_html__( 'You confirmed that this order was successfully received.', 'maklaplace' ) . '</p>';
+			} else {
+				$content .= '<p>' . esc_html__( 'Please confirm that you successfully received this order before leaving a review.', 'maklaplace' ) . '</p>';
+				$content .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="maklaplace-order-form">';
+				$content .= wp_nonce_field( 'maklaplace_confirm_order_received', 'maklaplace_nonce', true, false );
+				$content .= '<input type="hidden" name="action" value="maklaplace_confirm_order_received">';
+				$content .= '<input type="hidden" name="order_id" value="' . esc_attr( (string) $order_id ) . '">';
+				$content .= '<button type="submit" class="button button-primary">' . esc_html__( 'Confirm Received', 'maklaplace' ) . '</button>';
+				$content .= '</form>';
+			}
+		}
+		$content .= $review_eligible ? '<p class="maklaplace-meta">' . esc_html__( 'This order is now eligible for reviews.', 'maklaplace' ) . '</p>' : '<p class="maklaplace-meta">' . esc_html__( 'Reviews become available after you confirm receipt.', 'maklaplace' ) . '</p>';
+		if ( $review_eligible && ! is_array( $existing_review ) ) {
+			$content .= $this->render_order_review_form( $order );
+		} elseif ( is_array( $existing_review ) ) {
+			$content .= '<p>' . esc_html__( 'You already submitted a review for this order.', 'maklaplace' ) . '</p>';
+			if ( $this->container->get( ChefReviewRepository::class )->can_edit_review( $existing_review ) ) {
+				$content .= $this->render_order_review_form( $order, $existing_review );
+			}
+		}
+		$content .= '<p><a class="button" href="' . esc_url( home_url( '/orders/' ) ) . '">' . esc_html__( 'Back to Orders', 'maklaplace' ) . '</a></p>';
 		$content .= '</div></div>';
 
 		return $content;
+	}
+
+	private function render_customer_order_timeline( string $current_status ) : string {
+		$steps = array(
+			'pending'    => __( 'Pending', 'maklaplace' ),
+			'accepted'   => __( 'Accepted', 'maklaplace' ),
+			'preparing'  => __( 'Preparing', 'maklaplace' ),
+			'ready'      => __( 'Ready', 'maklaplace' ),
+			'on_the_way' => __( 'On the way', 'maklaplace' ),
+			'completed'  => __( 'Completed', 'maklaplace' ),
+			'cancelled'  => __( 'Cancelled', 'maklaplace' ),
+		);
+
+		$normalized = sanitize_key( $current_status );
+		$timeline = '<ol class="maklaplace-order-timeline" style="list-style:none;margin:0;padding:0;display:grid;gap:10px">';
+		foreach ( $steps as $key => $label ) {
+			$is_current = $key === $normalized;
+			$is_done = ! $is_current && $this->is_order_timeline_step_done( $key, $normalized );
+			$state = $is_current ? 'current' : ( $is_done ? 'done' : 'upcoming' );
+			$timeline .= '<li class="maklaplace-order-timeline-item maklaplace-order-timeline-' . esc_attr( $state ) . '" style="display:flex;align-items:center;gap:10px">';
+			$timeline .= '<span class="maklaplace-status-badge maklaplace-status-' . esc_attr( $key ) . '">' . esc_html( $label ) . '</span>';
+			$timeline .= '<span class="maklaplace-meta">' . esc_html( $is_current ? __( 'Current status', 'maklaplace' ) : ( $is_done ? __( 'Completed', 'maklaplace' ) : __( 'Pending next step', 'maklaplace' ) ) ) . '</span>';
+			$timeline .= '</li>';
+		}
+		$timeline .= '</ol>';
+
+		return $timeline;
+	}
+
+	private function render_order_review_form( array $order, array $existing_review = array() ) : string {
+		$order_id = absint( $order['id'] ?? 0 );
+		$rating = absint( $existing_review['rating'] ?? 5 );
+		$comment = (string) ( $existing_review['comment'] ?? '' );
+		$title = is_array( $existing_review ) && ! empty( $existing_review ) ? __( 'Edit Review', 'maklaplace' ) : __( 'Leave a Review', 'maklaplace' );
+
+		$html = '<h2>' . esc_html( $title ) . '</h2>';
+		$html .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="maklaplace-order-form">';
+		$html .= wp_nonce_field( 'maklaplace_submit_order_review', 'maklaplace_nonce', true, false );
+		$html .= '<input type="hidden" name="action" value="maklaplace_submit_order_review">';
+		$html .= '<input type="hidden" name="order_id" value="' . esc_attr( (string) $order_id ) . '">';
+		$html .= '<p><label><strong>' . esc_html__( 'Rating', 'maklaplace' ) . '</strong><br><select name="rating" required>';
+		for ( $i = 5; $i >= 1; $i-- ) {
+			$html .= '<option value="' . esc_attr( (string) $i ) . '"' . selected( $rating, $i, false ) . '>' . esc_html( number_format_i18n( $i ) ) . '</option>';
+		}
+		$html .= '</select></label></p>';
+		$html .= '<p><label><strong>' . esc_html__( 'Comment', 'maklaplace' ) . '</strong><br><textarea name="comment" rows="4" class="large-text">' . esc_textarea( $comment ) . '</textarea></label></p>';
+		$html .= '<p><button type="submit" class="button button-primary">' . esc_html( $title ) . '</button></p>';
+		$html .= '</form>';
+
+		return $html;
+	}
+
+	private function is_order_timeline_step_done( string $step, string $current_status ) : bool {
+		$sequence = array( 'pending', 'accepted', 'preparing', 'ready', 'on_the_way', 'completed' );
+		$current_index = array_search( $current_status, $sequence, true );
+		$step_index = array_search( $step, $sequence, true );
+
+		if ( false === $current_index || false === $step_index ) {
+			return false;
+		}
+
+		return $step_index < $current_index;
 	}
 
 	private function render_order_archive_pagination( int $total, int $per_page, int $page ) : string {
@@ -531,6 +1091,7 @@ final class MarketplaceController {
 		$html .= '<div class="maklaplace-grid">';
 		$html .= '<label><strong>' . esc_html__( 'Customer Name', 'maklaplace' ) . '</strong><br><input type="text" name="customer_name" value="' . esc_attr( $details['customer_name'] ) . '" required></label>';
 		$html .= '<label><strong>' . esc_html__( 'Phone Number', 'maklaplace' ) . '</strong><br><input type="text" name="customer_phone" value="' . esc_attr( $details['customer_phone'] ) . '" required></label>';
+		$html .= '<div style="grid-column:1/-1">' . $this->render_checkout_address_select( get_current_user_id(), $details['delivery_address'] ) . '</div>';
 		$html .= '<label style="grid-column:1/-1"><strong>' . esc_html__( 'Delivery Address', 'maklaplace' ) . '</strong><br><textarea name="delivery_address" rows="4" required>' . esc_textarea( $details['delivery_address'] ) . '</textarea></label>';
 		$html .= '<label style="grid-column:1/-1"><strong>' . esc_html__( 'Notes', 'maklaplace' ) . '</strong><br><textarea name="customer_notes" rows="4">' . esc_textarea( $details['customer_notes'] ) . '</textarea></label>';
 		$html .= '</div>';
@@ -541,22 +1102,56 @@ final class MarketplaceController {
 		return $html;
 	}
 
+	private function render_checkout_address_select( int $user_id, string $current_address ) : string {
+		$addresses = $this->get_saved_addresses_data( $user_id );
+		if ( empty( $addresses ) ) {
+			return '<p class="maklaplace-meta">' . esc_html__( 'No saved addresses yet. Add one on the Addresses page.', 'maklaplace' ) . '</p>';
+		}
+
+		$html = '<label><strong>' . esc_html__( 'Saved Addresses', 'maklaplace' ) . '</strong><br><select name="selected_saved_address" class="regular-text">';
+		$html .= '<option value="">' . esc_html__( 'Use current delivery address', 'maklaplace' ) . '</option>';
+		foreach ( $addresses as $address ) {
+			$label = $this->format_saved_address_label( $address );
+			$is_selected = '' !== $current_address && $current_address === (string) ( $address['address'] ?? '' );
+			$html .= '<option value="' . esc_attr( (string) ( $address['id'] ?? '' ) ) . '"' . selected( $is_selected, true, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		$html .= '</select></label>';
+		$html .= '<p class="maklaplace-meta">' . esc_html__( 'Select a saved address to reuse it during checkout. You can still edit the delivery address below.', 'maklaplace' ) . '</p>';
+
+		return $html;
+	}
+
 	public function handle_checkout_submit() : void {
 		$this->require_customer_access();
 		check_admin_referer( 'maklaplace_checkout_submit', 'maklaplace_nonce' );
 
+		$user_id = get_current_user_id();
+		$selected_address_id = sanitize_key( (string) ( $_POST['selected_saved_address'] ?? '' ) );
+		$selected_address = '';
+		if ( '' !== $selected_address_id ) {
+			$addresses = $this->get_saved_addresses_data( $user_id );
+			if ( isset( $addresses[ $selected_address_id ] ) ) {
+				$selected_address = (string) ( $addresses[ $selected_address_id ]['address'] ?? '' );
+			}
+		}
+
+		$delivery_address = sanitize_textarea_field( (string) ( $_POST['delivery_address'] ?? '' ) );
+		if ( '' !== $selected_address ) {
+			$delivery_address = $selected_address;
+		}
+
 		$cart_service = $this->container->get( CartService::class );
 		$cart_service->set_customer_details(
-			get_current_user_id(),
+			$user_id,
 			array(
 				'customer_name'    => sanitize_text_field( (string) ( $_POST['customer_name'] ?? '' ) ),
 				'customer_phone'   => sanitize_text_field( (string) ( $_POST['customer_phone'] ?? '' ) ),
-				'delivery_address' => sanitize_textarea_field( (string) ( $_POST['delivery_address'] ?? '' ) ),
+				'delivery_address' => $delivery_address,
 				'customer_notes'   => wp_kses_post( (string) ( $_POST['customer_notes'] ?? '' ) ),
 			)
 		);
 
-		$payload = $cart_service->build_order_payload( get_current_user_id() );
+		$payload = $cart_service->build_order_payload( $user_id );
 		if ( is_wp_error( $payload ) ) {
 			wp_die( esc_html( $payload->get_error_message() ) );
 		}
@@ -567,6 +1162,8 @@ final class MarketplaceController {
 			wp_die( esc_html( $order->get_error_message() ) );
 		}
 
+		do_action( 'maklaplace_order_confirmed', $order );
+
 		$cart_service->clear_cart( get_current_user_id() );
 		wp_safe_redirect( add_query_arg( array( 'order_id' => (int) ( $order['id'] ?? 0 ) ), home_url( '/order-confirmation/' ) ) );
 		exit;
@@ -574,9 +1171,10 @@ final class MarketplaceController {
 
 	private function render_order_confirmation_route() : void {
 		$order_id = absint( $_GET['order_id'] ?? 0 );
-		$order = $order_id > 0 ? $this->container->get( OrderService::class )->get_order( $order_id ) : null;
+		$order_service = $this->container->get( OrderService::class );
+		$order = $order_id > 0 ? $order_service->get_order( $order_id ) : null;
 
-		if ( ! is_array( $order ) ) {
+		if ( ! is_array( $order ) || ! $order_service->can_view_order( get_current_user_id(), $order ) ) {
 			global $wp_query;
 			$wp_query->set_404();
 			status_header( 404 );
@@ -610,6 +1208,195 @@ final class MarketplaceController {
 		$content .= '</div></div>';
 
 		$this->render_document( $content, __( 'Order Confirmation', 'maklaplace' ) );
+	}
+
+	public function handle_confirm_order_received() : void {
+		$this->require_customer_access();
+		check_admin_referer( 'maklaplace_confirm_order_received', 'maklaplace_nonce' );
+
+		$order_id = absint( $_POST['order_id'] ?? 0 );
+		$order_service = $this->container->get( OrderService::class );
+		$result = $order_service->confirm_receipt( get_current_user_id(), $order_id );
+
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+
+		wp_safe_redirect( add_query_arg( array( 'order_id' => $order_id, 'confirmed' => 1 ), home_url( '/orders/' ) ) );
+		exit;
+	}
+
+	public function handle_submit_order_review() : void {
+		$this->require_customer_access();
+		check_admin_referer( 'maklaplace_submit_order_review', 'maklaplace_nonce' );
+
+		$order_id = absint( $_POST['order_id'] ?? 0 );
+		$order_service = $this->container->get( OrderService::class );
+		$order = $order_service->get_order( $order_id );
+		if ( ! is_array( $order ) || ! $order_service->can_view_order( get_current_user_id(), $order ) ) {
+			wp_die( esc_html__( 'Order not found.', 'maklaplace' ) );
+		}
+
+		if ( ! $order_service->can_customer_review_order( $order ) ) {
+			wp_die( esc_html__( 'This order is not yet eligible for a review.', 'maklaplace' ) );
+		}
+
+		$repository = $this->container->get( ChefReviewRepository::class );
+		$existing = $repository->get_by_order( $order_id );
+		if ( is_array( $existing ) && ! $repository->can_edit_review( $existing ) ) {
+			wp_die( esc_html__( 'Your review can no longer be edited.', 'maklaplace' ) );
+		}
+
+		$review = $repository->upsert_review(
+			array(
+				'order_id'        => $order_id,
+				'customer_user_id' => get_current_user_id(),
+				'chef_user_id'     => (int) ( $order[ OrderKeys::CHEF_USER_ID ] ?? 0 ),
+				'rating'          => absint( $_POST['rating'] ?? 0 ),
+				'comment'         => sanitize_textarea_field( (string) ( $_POST['comment'] ?? '' ) ),
+				'reviewer_name'   => wp_get_current_user() instanceof WP_User ? wp_get_current_user()->display_name : '',
+			)
+		);
+
+		if ( is_wp_error( $review ) ) {
+			wp_die( esc_html( $review->get_error_message() ) );
+		}
+
+		wp_safe_redirect( add_query_arg( array( 'order_id' => $order_id, 'reviewed' => 1 ), home_url( '/orders/' ) ) );
+		exit;
+	}
+
+	public function handle_save_customer_address() : void {
+		$this->require_customer_access();
+		check_admin_referer( 'maklaplace_save_customer_address', 'maklaplace_nonce' );
+
+		$address_id = sanitize_key( (string) ( $_POST['address_id'] ?? '' ) );
+		$label = sanitize_text_field( (string) ( $_POST['label'] ?? '' ) );
+		$address = sanitize_textarea_field( (string) ( $_POST['address'] ?? '' ) );
+		$default = ! empty( $_POST['is_default'] );
+
+		if ( '' === trim( $address ) ) {
+			wp_die( esc_html__( 'Address is required.', 'maklaplace' ) );
+		}
+
+		$addresses = $this->get_saved_addresses_data( get_current_user_id() );
+		if ( '' === $address_id ) {
+			$address_id = 'addr_' . wp_generate_password( 8, false, false );
+		}
+		$addresses[ $address_id ] = array(
+			'id'          => $address_id,
+			'label'       => $label,
+			'address'     => $address,
+			'is_default'  => $default,
+			'updated_at'  => current_time( 'mysql' ),
+		);
+		if ( $default ) {
+			foreach ( $addresses as $key => $item ) {
+				if ( $key !== $address_id ) {
+					$addresses[ $key ]['is_default'] = false;
+				}
+			}
+		}
+		$this->save_customer_addresses( get_current_user_id(), $addresses );
+		wp_safe_redirect( wp_get_referer() ?: home_url( '/addresses/' ) );
+		exit;
+	}
+
+	public function handle_delete_customer_address() : void {
+		$this->require_customer_access();
+		check_admin_referer( 'maklaplace_delete_customer_address', 'maklaplace_nonce' );
+		$address_id = sanitize_key( (string) ( $_POST['address_id'] ?? '' ) );
+		$addresses = $this->get_saved_addresses_data( get_current_user_id() );
+		unset( $addresses[ $address_id ] );
+		$this->save_customer_addresses( get_current_user_id(), $addresses );
+		wp_safe_redirect( wp_get_referer() ?: home_url( '/addresses/' ) );
+		exit;
+	}
+
+	public function handle_set_default_customer_address() : void {
+		$this->require_customer_access();
+		check_admin_referer( 'maklaplace_set_default_customer_address', 'maklaplace_nonce' );
+		$address_id = sanitize_key( (string) ( $_POST['address_id'] ?? '' ) );
+		$addresses = $this->get_saved_addresses_data( get_current_user_id() );
+		if ( isset( $addresses[ $address_id ] ) ) {
+			foreach ( $addresses as $key => $item ) {
+				$addresses[ $key ]['is_default'] = $key === $address_id;
+			}
+			$this->save_customer_addresses( get_current_user_id(), $addresses );
+		}
+		wp_safe_redirect( wp_get_referer() ?: home_url( '/addresses/' ) );
+		exit;
+	}
+
+	public function handle_save_customer_profile() : void {
+		$this->require_customer_access();
+		check_admin_referer( 'maklaplace_save_customer_profile', 'maklaplace_nonce' );
+
+		$user_id = get_current_user_id();
+		$display_name = sanitize_text_field( (string) ( $_POST['display_name'] ?? '' ) );
+		$customer_phone = sanitize_text_field( (string) ( $_POST['customer_phone'] ?? '' ) );
+		$user_email = sanitize_email( (string) ( $_POST['user_email'] ?? '' ) );
+		$new_password = (string) ( $_POST['new_password'] ?? '' );
+		$confirm_password = (string) ( $_POST['confirm_password'] ?? '' );
+		$default_address_id = sanitize_key( (string) ( $_POST['default_address_id'] ?? '' ) );
+
+		if ( '' === $display_name || '' === $user_email ) {
+			wp_die( esc_html__( 'Name and email are required.', 'maklaplace' ) );
+		}
+
+		if ( ! is_email( $user_email ) ) {
+			wp_die( esc_html__( 'Please enter a valid email address.', 'maklaplace' ) );
+		}
+
+		$current_user = get_userdata( $user_id );
+		if ( $current_user instanceof WP_User && $user_email !== $current_user->user_email ) {
+			$existing_user = get_user_by( 'email', $user_email );
+			if ( $existing_user instanceof WP_User && (int) $existing_user->ID !== $user_id ) {
+				wp_die( esc_html__( 'That email address is already in use.', 'maklaplace' ) );
+			}
+		}
+
+		if ( '' !== $new_password || '' !== $confirm_password ) {
+			if ( $new_password !== $confirm_password ) {
+				wp_die( esc_html__( 'Passwords do not match.', 'maklaplace' ) );
+			}
+
+			if ( strlen( $new_password ) < 8 ) {
+				wp_die( esc_html__( 'Password must be at least 8 characters long.', 'maklaplace' ) );
+			}
+		}
+
+		wp_update_user(
+			array(
+				'ID'           => $user_id,
+				'display_name' => $display_name,
+				'user_email'   => $user_email,
+			)
+		);
+
+		update_user_meta( $user_id, UserMeta::CUSTOMER_PHONE_NUMBER, $customer_phone );
+
+		if ( '' !== $new_password ) {
+			wp_update_user(
+				array(
+					'ID'        => $user_id,
+					'user_pass' => $new_password,
+				)
+			);
+		}
+
+		if ( '' !== $default_address_id ) {
+			$addresses = $this->get_saved_addresses_data( $user_id );
+			if ( isset( $addresses[ $default_address_id ] ) ) {
+				foreach ( $addresses as $key => $item ) {
+					$addresses[ $key ]['is_default'] = $key === $default_address_id;
+				}
+				$this->save_customer_addresses( $user_id, $addresses );
+			}
+		}
+
+		wp_safe_redirect( add_query_arg( array( 'updated' => 1 ), wp_get_referer() ?: home_url( '/profile/' ) ) );
+		exit;
 	}
 
 	private function render_order_entry_route() : void {

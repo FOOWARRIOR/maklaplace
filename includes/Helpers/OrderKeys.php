@@ -30,4 +30,6 @@ final class OrderKeys {
 	public const CUSTOMER_NOTES          = 'maklaplace_order_customer_notes';
 	public const CHEF_NOTES              = 'maklaplace_order_chef_notes';
 	public const SUBMISSION_HASH         = 'maklaplace_order_submission_hash';
+	public const CUSTOMER_RECEIVED_CONFIRMED = 'maklaplace_order_customer_received_confirmed';
+	public const CUSTOMER_RECEIVED_AT     = 'maklaplace_order_customer_received_at';
 }

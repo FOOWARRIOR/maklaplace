@@ -41,6 +41,13 @@ final class OrderService {
 	private WalletService $wallets;
 
 	/**
+	 * Cached order store for the current request.
+	 *
+	 * @var array<int, array<string, mixed>>|null
+	 */
+	private ?array $order_store_cache = null;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param ChefProfileService $chef_profiles Chef profile service.
@@ -113,6 +120,8 @@ final class OrderService {
 			OrderKeys::CUSTOMER_NOTES   => Validation::text( $payload['customer_notes'] ?? '' ),
 			OrderKeys::CHEF_NOTES       => '',
 			OrderKeys::SUBMISSION_HASH  => $hash,
+			OrderKeys::CUSTOMER_RECEIVED_CONFIRMED => false,
+			OrderKeys::CUSTOMER_RECEIVED_AT => '',
 			'customer_snapshot'          => $customer_snapshot,
 			'pricing_snapshot'           => $pricing_snapshot,
 		);
@@ -179,6 +188,44 @@ final class OrderService {
 	}
 
 	/**
+	 * Confirm a completed order as received by the customer.
+	 *
+	 * @param int $customer_user_id Customer user ID.
+	 * @param int $order_id Order ID.
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	public function confirm_receipt( int $customer_user_id, int $order_id ) : array|\WP_Error {
+		$orders = $this->get_order_store();
+		$order = $orders[ $order_id ] ?? null;
+
+		if ( ! is_array( $order ) ) {
+			return new \WP_Error( 'maklaplace_order_not_found', __( 'Order not found.', 'maklaplace' ) );
+		}
+
+		if ( (int) ( $order[ OrderKeys::CUSTOMER_USER_ID ] ?? 0 ) !== $customer_user_id ) {
+			return new \WP_Error( 'maklaplace_order_forbidden', __( 'You are not allowed to confirm this order.', 'maklaplace' ) );
+		}
+
+		if ( 'completed' !== (string) ( $order[ OrderKeys::STATUS ] ?? '' ) ) {
+			return new \WP_Error( 'maklaplace_order_not_completed', __( 'Only completed orders can be confirmed.', 'maklaplace' ) );
+		}
+
+		if ( ! empty( $order[ OrderKeys::CUSTOMER_RECEIVED_CONFIRMED ] ) ) {
+			return $order;
+		}
+
+		$order[ OrderKeys::CUSTOMER_RECEIVED_CONFIRMED ] = true;
+		$order[ OrderKeys::CUSTOMER_RECEIVED_AT ] = current_time( 'mysql' );
+		$order[ OrderKeys::UPDATED_AT ] = current_time( 'mysql' );
+		$orders[ $order_id ] = $order;
+		$this->save_order_store( $orders );
+
+		do_action( 'maklaplace_order_received_confirmed', $order );
+
+		return $order;
+	}
+
+	/**
 	 * Check whether an order commission has been processed.
 	 *
 	 * @param int $order_id Order ID.
@@ -195,9 +242,11 @@ final class OrderService {
 	 * @return array<int, array<string, mixed>>
 	 */
 	public function get_orders_by_customer( int $customer_user_id ) : array {
+		$orders = $this->get_order_store();
+
 		return array_values(
 			array_filter(
-				$this->get_order_store(),
+				$orders,
 				static fn( array $order ) : bool => (int) $order[ OrderKeys::CUSTOMER_USER_ID ] === $customer_user_id
 			)
 		);
@@ -210,9 +259,11 @@ final class OrderService {
 	 * @return array<int, array<string, mixed>>
 	 */
 	public function get_orders_by_chef( int $chef_user_id ) : array {
+		$orders = $this->get_order_store();
+
 		return array_values(
 			array_filter(
-				$this->get_order_store(),
+				$orders,
 				static fn( array $order ) : bool => (int) $order[ OrderKeys::CHEF_USER_ID ] === $chef_user_id
 			)
 		);
@@ -231,6 +282,61 @@ final class OrderService {
 	}
 
 	/**
+	 * Fetch orders visible to a specific actor.
+	 *
+	 * Admins can view all orders, customers can view their own orders,
+	 * and chefs can view the orders assigned to them.
+	 *
+	 * @param int $actor_user_id Actor user ID.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function get_visible_orders_for_actor( int $actor_user_id ) : array {
+		if ( $this->is_admin( $actor_user_id ) ) {
+			return array_values( $this->get_order_store() );
+		}
+
+		$user = get_userdata( $actor_user_id );
+		if ( ! $user instanceof WP_User ) {
+			return array();
+		}
+
+		if ( in_array( 'maklaplace_chef', (array) $user->roles, true ) ) {
+			return $this->get_orders_by_chef( $actor_user_id );
+		}
+
+		if ( in_array( 'maklaplace_customer', (array) $user->roles, true ) ) {
+			return $this->get_orders_by_customer( $actor_user_id );
+		}
+
+		return array();
+	}
+
+	/**
+	 * Check whether an actor may view a specific order.
+	 *
+	 * @param int                 $actor_user_id Actor user ID.
+	 * @param array<string, mixed> $order Order record.
+	 * @return bool
+	 */
+	public function can_view_order( int $actor_user_id, array $order ) : bool {
+		if ( $this->is_admin( $actor_user_id ) ) {
+			return true;
+		}
+
+		return (int) ( $order[ OrderKeys::CUSTOMER_USER_ID ] ?? 0 ) === $actor_user_id || (int) ( $order[ OrderKeys::CHEF_USER_ID ] ?? 0 ) === $actor_user_id;
+	}
+
+	/**
+	 * Check if an order is eligible for a customer review.
+	 *
+	 * @param array<string, mixed> $order Order record.
+	 * @return bool
+	 */
+	public function can_customer_review_order( array $order ) : bool {
+		return 'completed' === (string) ( $order[ OrderKeys::STATUS ] ?? '' ) && ! empty( $order[ OrderKeys::CUSTOMER_RECEIVED_CONFIRMED ] );
+	}
+
+	/**
 	 * Validate order ownership.
 	 *
 	 * @param int $actor_user_id Actor user ID.
@@ -238,11 +344,7 @@ final class OrderService {
 	 * @return bool
 	 */
 	public function validate_ownership( int $actor_user_id, array $order ) : bool {
-		if ( $this->is_admin( $actor_user_id ) ) {
-			return true;
-		}
-
-		return (int) $order[ OrderKeys::CUSTOMER_USER_ID ] === $actor_user_id || (int) $order[ OrderKeys::CHEF_USER_ID ] === $actor_user_id;
+		return $this->can_view_order( $actor_user_id, $order );
 	}
 
 	/**
@@ -418,8 +520,14 @@ final class OrderService {
 	 * @return array<int, array<string, mixed>>
 	 */
 	public function get_order_store() : array {
+		if ( null !== $this->order_store_cache ) {
+			return $this->order_store_cache;
+		}
+
 		$items = get_option( 'maklaplace_orders', array() );
-		return is_array( $items ) ? $items : array();
+		$this->order_store_cache = is_array( $items ) ? $items : array();
+
+		return $this->order_store_cache;
 	}
 
 	/**
@@ -430,6 +538,7 @@ final class OrderService {
 	 */
 	private function save_order_store( array $items ) : void {
 		update_option( 'maklaplace_orders', $items, false );
+		$this->order_store_cache = $items;
 	}
 
 	/**

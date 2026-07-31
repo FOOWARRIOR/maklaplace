@@ -37,6 +37,7 @@ final class NotificationHooks {
 	 */
 	public function register() : void {
 		add_action( 'maklaplace_order_created', array( $this, 'on_order_created' ) );
+		add_action( 'maklaplace_order_confirmed', array( $this, 'on_order_confirmed' ) );
 		add_action( 'maklaplace_order_status_changed', array( $this, 'on_order_status_changed' ), 10, 3 );
 		add_action( 'maklaplace_order_completed', array( $this, 'on_order_completed' ) );
 		add_action( 'maklaplace_order_cancelled', array( $this, 'on_order_cancelled' ) );
@@ -60,6 +61,24 @@ final class NotificationHooks {
 			array(
 				'recipient_user_id' => (int) $order['maklaplace_order_customer_user_id'],
 				'sender_user_id'    => 0,
+				'order_id'          => (int) $order['id'],
+				'chef_id'           => (int) $order['maklaplace_order_chef_user_id'],
+			)
+		);
+	}
+
+	/**
+	 * Order confirmed.
+	 *
+	 * @param array<string, mixed> $order Order data.
+	 * @return void
+	 */
+	public function on_order_confirmed( array $order ) : void {
+		$this->notifications->notify_from_event(
+			'order_confirmed',
+			array(
+				'recipient_user_id' => (int) $order['maklaplace_order_customer_user_id'],
+				'sender_user_id'    => (int) ( $order['maklaplace_order_chef_user_id'] ?? 0 ),
 				'order_id'          => (int) $order['id'],
 				'chef_id'           => (int) $order['maklaplace_order_chef_user_id'],
 			)
