@@ -90,17 +90,31 @@ final class NotificationService {
 	 */
 	public function format_message( string $event_type, array $context = array() ) : string {
 		$templates = array(
+			'order.created'            => __( 'Your order has been received.', 'maklaplace' ),
+			'order.accepted'           => __( 'Your order has been accepted.', 'maklaplace' ),
+			'order.preparing'          => __( 'Your order is being prepared.', 'maklaplace' ),
+			'order.ready'              => __( 'Your order is ready.', 'maklaplace' ),
+			'order.completed'          => __( 'Your order has been completed.', 'maklaplace' ),
+			'order.cancelled'          => __( 'Your order has been cancelled.', 'maklaplace' ),
 			'order_created'            => __( 'Your order has been received.', 'maklaplace' ),
 			'order_confirmed'          => __( 'Your order has been confirmed.', 'maklaplace' ),
 			'order_status_changed'     => __( 'Your order status has been updated.', 'maklaplace' ),
 			'order_completed'          => __( 'Your order has been completed.', 'maklaplace' ),
 			'order_cancelled'          => __( 'Your order has been cancelled.', 'maklaplace' ),
+			'wallet.commission_added'  => __( 'A commission has been added to your wallet.', 'maklaplace' ),
+			'wallet.threshold_reached' => __( 'Your wallet has reached the collection threshold.', 'maklaplace' ),
+			'wallet.deduction_recorded' => __( 'A wallet deduction has been recorded.', 'maklaplace' ),
 			'commission_added'         => __( 'A commission has been added to your wallet.', 'maklaplace' ),
 			'wallet_threshold_reached' => __( 'Your wallet has reached the collection threshold.', 'maklaplace' ),
 			'wallet_status_changed'    => __( 'Your wallet status has changed.', 'maklaplace' ),
+			'chef.registered'          => __( 'Your chef profile has been registered.', 'maklaplace' ),
+			'chef.approved'            => __( 'Your chef profile has been approved.', 'maklaplace' ),
+			'chef.rejected'            => __( 'Your chef profile has been rejected.', 'maklaplace' ),
+			'chef.suspended'           => __( 'Your chef profile has been suspended.', 'maklaplace' ),
 			'chef_approved'            => __( 'Your chef profile has been approved.', 'maklaplace' ),
 			'chef_rejected'            => __( 'Your chef profile has been rejected.', 'maklaplace' ),
 			'chef_suspended'           => __( 'Your chef profile has been suspended.', 'maklaplace' ),
+			'customer.registered'      => __( 'Your customer account has been created.', 'maklaplace' ),
 		);
 
 		return $templates[ $event_type ] ?? __( 'You have a new notification.', 'maklaplace' );

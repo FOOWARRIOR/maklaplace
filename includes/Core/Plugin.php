@@ -8,6 +8,7 @@
 namespace MaklaPlace\Core;
 
 use MaklaPlace\Helpers\Logger;
+use MaklaPlace\Modules\EventModule;
 use MaklaPlace\Modules\ChefModule;
 use MaklaPlace\Modules\AuthModule;
 use MaklaPlace\Modules\AnalyticsModule;
@@ -136,6 +137,7 @@ final class Plugin {
 			new UserModule( $this->container, $this->config ),
 			new AuthModule( $this->container, $this->config ),
 			new ChefModule( $this->container, $this->config ),
+			new EventModule( $this->container, $this->config ),
 			new AnalyticsModule( $this->container, $this->config ),
 			new MenuModule( $this->container, $this->config ),
 			new OrdersModule( $this->container, $this->config ),
