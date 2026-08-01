@@ -18,6 +18,7 @@ use MaklaPlace\Core\ChefProfileService;
 use MaklaPlace\Helpers\ChefProfileKeys;
 use MaklaPlace\Helpers\MenuKeys;
 use MaklaPlace\Helpers\OrderKeys;
+use MaklaPlace\Helpers\NotificationKeys;
 use MaklaPlace\Helpers\UserMeta;
 use MaklaPlace\Repositories\ChefReviewRepository;
 use WP_Query;
@@ -455,6 +456,10 @@ final class MarketplaceController {
 		$this->render_document( $this->render_customer_addresses(), __( 'Addresses', 'maklaplace' ) );
 	}
 
+	private function render_customer_notifications_route() : void {
+		$this->render_document( $this->render_customer_notifications(), __( 'Notifications', 'maklaplace' ) );
+	}
+
 	private function render_checkout_route() : void {
 		$this->render_document( $this->render_checkout_page(), __( 'Checkout', 'maklaplace' ) );
 	}
@@ -562,11 +567,11 @@ final class MarketplaceController {
 		$orders = $order_service->get_orders_by_customer( $user_id );
 		$favorites = $this->get_favorite_chefs( $user_id );
 		$addresses = $this->get_saved_addresses( $user_id );
-		$recent_orders = array_slice(
-			$this->sort_orders_by_date( $orders, 'desc' ),
-			0,
-			5
-		);
+		$dashboard_page = max( 1, absint( $_GET['dashboard_page'] ?? 1 ) );
+		$per_page = 5;
+		$sorted_orders = $this->sort_orders_by_date( $orders, 'desc' );
+		$total_orders = count( $sorted_orders );
+		$recent_orders = array_slice( $sorted_orders, ( $dashboard_page - 1 ) * $per_page, $per_page );
 		$active_orders = count(
 			array_filter(
 				$orders,
@@ -591,8 +596,10 @@ final class MarketplaceController {
 		$content .= $this->render_dashboard_card( __( 'Saved Addresses', 'maklaplace' ), number_format_i18n( count( $addresses ) ), __( 'Stored delivery addresses.', 'maklaplace' ) );
 		$content .= '</div>';
 		$content .= $this->render_dashboard_recent_orders( $recent_orders );
+		$content .= $this->render_dashboard_pagination( $total_orders, $per_page, $dashboard_page );
 		$content .= $this->render_dashboard_favorites_preview( $favorites );
 		$content .= $this->render_dashboard_addresses_preview( $addresses );
+		$content .= $this->render_dashboard_notifications_preview( $user_id );
 		$content .= '<div class="maklaplace-panel"><div class="maklaplace-page-actions"><h2>' . esc_html__( 'Profile', 'maklaplace' ) . '</h2><a class="button button-primary" href="' . esc_url( home_url( '/profile/' ) ) . '">' . esc_html__( 'Edit Profile', 'maklaplace' ) . '</a></div><p class="maklaplace-meta">' . esc_html__( 'Update your name, phone number, email, password, and default delivery address.', 'maklaplace' ) . '</p></div>';
 		$content .= '</div>';
 
@@ -626,6 +633,32 @@ final class MarketplaceController {
 		$content .= '</div>';
 		$content .= '<p><button type="submit" class="button button-primary">' . esc_html__( 'Save Profile', 'maklaplace' ) . '</button></p>';
 		$content .= '</form></div></div>';
+
+		return $content;
+	}
+
+	private function render_customer_notifications() : string {
+		$this->require_customer_access();
+
+		$user_id = get_current_user_id();
+		$notifications = $this->container->get( NotificationService::class )->get_for_user( $user_id );
+		usort(
+			$notifications,
+			static fn( array $left, array $right ) : int => strcmp( (string) ( $right[ \MaklaPlace\Helpers\NotificationKeys::CREATED_AT ] ?? '' ), (string) ( $left[ \MaklaPlace\Helpers\NotificationKeys::CREATED_AT ] ?? '' ) )
+		);
+
+		$content = '<div class="wrap maklaplace-public-marketplace"><div class="maklaplace-page-actions"><h1>' . esc_html__( 'Notifications', 'maklaplace' ) . '</h1><a class="button" href="' . esc_url( home_url( '/dashboard/' ) ) . '">' . esc_html__( 'Back to Dashboard', 'maklaplace' ) . '</a></div>';
+
+		if ( empty( $notifications ) ) {
+			$content .= '<div class="maklaplace-panel"><p>' . esc_html__( 'No notifications yet.', 'maklaplace' ) . '</p></div></div>';
+			return $content;
+		}
+
+		$content .= '<div class="maklaplace-grid">';
+		foreach ( $notifications as $notification ) {
+			$content .= $this->render_notification_card( $notification );
+		}
+		$content .= '</div></div>';
 
 		return $content;
 	}
@@ -709,6 +742,28 @@ final class MarketplaceController {
 		return $html;
 	}
 
+	private function render_dashboard_pagination( int $total_items, int $per_page, int $current_page ) : string {
+		$total_pages = (int) ceil( $total_items / max( 1, $per_page ) );
+		if ( $total_pages <= 1 ) {
+			return '';
+		}
+
+		$html = '<div class="maklaplace-panel"><div class="tablenav"><div class="tablenav-pages">';
+		$html .= paginate_links(
+			array(
+				'base'      => add_query_arg( 'dashboard_page', '%#%', home_url( '/dashboard/' ) ),
+				'format'    => '',
+				'current'   => $current_page,
+				'total'     => $total_pages,
+				'prev_text' => esc_html__( 'Previous', 'maklaplace' ),
+				'next_text' => esc_html__( 'Next', 'maklaplace' ),
+			)
+		);
+		$html .= '</div></div></div>';
+
+		return $html;
+	}
+
 	private function render_dashboard_favorites_preview( array $chef_ids ) : string {
 		$html = '<div class="maklaplace-panel"><h2>' . esc_html__( 'Favorite Chefs', 'maklaplace' ) . '</h2>';
 		if ( empty( $chef_ids ) ) {
@@ -735,6 +790,53 @@ final class MarketplaceController {
 			$html .= '<li>' . esc_html( (string) $address ) . '</li>';
 		}
 		$html .= '</ul></div>';
+
+		return $html;
+	}
+
+	private function render_dashboard_notifications_preview( int $user_id ) : string {
+		$notifications = $this->container->get( NotificationService::class )->get_for_user( $user_id );
+		if ( empty( $notifications ) ) {
+			return '<div class="maklaplace-panel"><h2>' . esc_html__( 'Notifications', 'maklaplace' ) . '</h2><p>' . esc_html__( 'No notifications yet.', 'maklaplace' ) . '</p></div>';
+		}
+
+		usort(
+			$notifications,
+			static fn( array $left, array $right ) : int => strcmp( (string) ( $right[ NotificationKeys::CREATED_AT ] ?? '' ), (string) ( $left[ NotificationKeys::CREATED_AT ] ?? '' ) )
+		);
+
+		$html = '<div class="maklaplace-panel"><h2>' . esc_html__( 'Notifications', 'maklaplace' ) . '</h2><ul style="margin:0;padding-left:18px">';
+		foreach ( array_slice( $notifications, 0, 5 ) as $notification ) {
+			$event_type = ucwords( str_replace( array( '_', '-' ), ' ', sanitize_key( (string) ( $notification[ NotificationKeys::EVENT_TYPE ] ?? '' ) ) ) );
+			$message = (string) ( $notification[ NotificationKeys::MESSAGE ] ?? '' );
+			$html .= '<li><strong>' . esc_html( $event_type ) . ':</strong> ' . esc_html( $message ) . '</li>';
+		}
+		$html .= '</ul><p><a class="button" href="' . esc_url( home_url( '/notifications/' ) ) . '">' . esc_html__( 'View Notifications', 'maklaplace' ) . '</a></p></div>';
+
+		return $html;
+	}
+
+	private function render_notification_card( array $notification ) : string {
+		$event_type = sanitize_key( (string) ( $notification[\MaklaPlace\Helpers\NotificationKeys::EVENT_TYPE] ?? '' ) );
+		$message = (string) ( $notification[\MaklaPlace\Helpers\NotificationKeys::MESSAGE] ?? '' );
+		$status = (string) ( $notification[\MaklaPlace\Helpers\NotificationKeys::READ_STATUS] ?? 'unread' );
+		$created_at = (string) ( $notification[\MaklaPlace\Helpers\NotificationKeys::CREATED_AT] ?? '' );
+		$notification_id = absint( $notification['id'] ?? 0 );
+
+		$html = '<article class="maklaplace-card">';
+		$html .= '<h2>' . esc_html( ucwords( str_replace( array( '_', '-' ), ' ', $event_type ) ) ) . '</h2>';
+		$html .= '<p>' . esc_html( $message ) . '</p>';
+		$html .= '<p><span class="maklaplace-chip">' . esc_html( ucfirst( $status ) ) . '</span></p>';
+		$html .= '<p class="maklaplace-meta">' . esc_html( $created_at ) . '</p>';
+		if ( 'unread' === $status && $notification_id > 0 ) {
+			$html .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			$html .= wp_nonce_field( 'maklaplace_mark_notification_read', 'maklaplace_nonce', true, false );
+			$html .= '<input type="hidden" name="action" value="maklaplace_mark_notification_read">';
+			$html .= '<input type="hidden" name="notification_id" value="' . esc_attr( (string) $notification_id ) . '">';
+			$html .= '<button type="submit" class="button">' . esc_html__( 'Mark Read', 'maklaplace' ) . '</button>';
+			$html .= '</form>';
+		}
+		$html .= '</article>';
 
 		return $html;
 	}
@@ -1396,6 +1498,19 @@ final class MarketplaceController {
 		}
 
 		wp_safe_redirect( add_query_arg( array( 'updated' => 1 ), wp_get_referer() ?: home_url( '/profile/' ) ) );
+		exit;
+	}
+
+	public function handle_mark_notification_read() : void {
+		$this->require_customer_access();
+		check_admin_referer( 'maklaplace_mark_notification_read', 'maklaplace_nonce' );
+
+		$notification_id = absint( $_POST['notification_id'] ?? 0 );
+		if ( $notification_id > 0 ) {
+			$this->container->get( NotificationService::class )->mark_read( $notification_id );
+		}
+
+		wp_safe_redirect( wp_get_referer() ?: home_url( '/notifications/' ) );
 		exit;
 	}
 

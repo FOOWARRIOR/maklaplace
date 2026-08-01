@@ -8,6 +8,8 @@
 namespace MaklaPlace\Modules;
 
 use MaklaPlace\Core\Module;
+use MaklaPlace\Core\Notifications\ChannelRegistry;
+use MaklaPlace\Core\Notifications\WhatsAppChannel;
 use MaklaPlace\Core\NotificationHooks;
 use MaklaPlace\Core\NotificationService;
 
@@ -24,6 +26,7 @@ final class NotificationModule extends Module {
 	 * @return void
 	 */
 	public function register_services() : void {
+		$this->container->singleton( ChannelRegistry::class, ChannelRegistry::class );
 		$this->container->singleton( NotificationService::class, NotificationService::class );
 		$this->container->singleton( NotificationHooks::class, NotificationHooks::class );
 	}
@@ -43,5 +46,7 @@ final class NotificationModule extends Module {
 	 * @return void
 	 */
 	public function boot() : void {
+		$registry = $this->container->get( ChannelRegistry::class );
+		$registry->register_channel( $this->container->get( WhatsAppChannel::class ) );
 	}
 }
