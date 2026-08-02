@@ -132,12 +132,14 @@ final class AdminController {
 
 	public function settings_page() : void {
 		$this->render_header( __( 'Settings', 'maklaplace' ) );
+		$this->render_bulk_notice();
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'maklaplace_save_settings', 'maklaplace_settings_nonce' );
 		echo '<input type="hidden" name="action" value="maklaplace_save_settings" />';
 		$this->render_settings_sections();
 		submit_button();
 		echo '</form>';
+		$this->render_whatsapp_test_form();
 		$this->render_footer();
 	}
 
@@ -214,6 +216,18 @@ final class AdminController {
 		$settings = $this->sanitize_settings( $submitted );
 		$whatsapp = isset( $settings['notifications']['whatsapp'] ) && is_array( $settings['notifications']['whatsapp'] ) ? $settings['notifications']['whatsapp'] : array();
 		$recipient = sanitize_text_field( (string) ( $submitted['notifications']['whatsapp']['test_phone_number'] ?? '' ) );
+		$template_name = sanitize_text_field( (string) ( $submitted['notifications']['whatsapp']['test_template_name'] ?? 'hello_world' ) );
+		$template_language = sanitize_text_field( (string) ( $submitted['notifications']['whatsapp']['test_template_language'] ?? 'en_US' ) );
+		$template_parameters = array_values(
+			array_filter(
+				array(
+					sanitize_text_field( (string) ( $submitted['notifications']['whatsapp']['test_template_param_1'] ?? '' ) ),
+					sanitize_text_field( (string) ( $submitted['notifications']['whatsapp']['test_template_param_2'] ?? '' ) ),
+					sanitize_text_field( (string) ( $submitted['notifications']['whatsapp']['test_template_param_3'] ?? '' ) ),
+				),
+				static fn( string $value ) : bool => '' !== $value
+			)
+		);
 
 		if ( '' === $recipient ) {
 			$this->set_whatsapp_test_notice(
@@ -235,9 +249,13 @@ final class AdminController {
 				'message'                => __( 'This is a test message from MaklaPlace.', 'maklaplace' ),
 				'type'                   => 'whatsapp.test',
 				'priority'               => 'normal',
+				'template_name'          => $template_name,
+				'template_language'      => $template_language,
+				'template_parameters'    => $template_parameters,
 				'metadata'               => array(
 					'provider' => $provider->get_provider_name(),
 					'sandbox'  => ! empty( $whatsapp['sandbox_mode'] ),
+					'endpoint' => (string) ( $whatsapp['api_endpoint'] ?? '' ),
 				),
 			)
 		);
@@ -245,9 +263,7 @@ final class AdminController {
 		$this->set_whatsapp_test_notice(
 			array(
 				'type'    => ! empty( $result['success'] ) ? 'success' : 'error',
-				'message' => ! empty( $result['success'] )
-					? sprintf( __( 'WhatsApp test message sent to %s.', 'maklaplace' ), $recipient )
-					: sprintf( __( 'WhatsApp test failed: %s', 'maklaplace' ), (string) ( $result['error'] ?? __( 'Unknown error.', 'maklaplace' ) ) ),
+				'message' => $this->build_whatsapp_test_notice_message( $recipient, $result ),
 			)
 		);
 
@@ -423,34 +439,131 @@ final class AdminController {
 			'simulated' => __( 'Simulated provider', 'maklaplace' ),
 			'real'      => __( 'Real HTTP provider', 'maklaplace' ),
 		) );
-		$this->nested_input_row( 'notifications', 'whatsapp', 'api_endpoint', __( 'API Endpoint', 'maklaplace' ), $settings['api_endpoint'] ?? '' );
-		$this->nested_input_row( 'notifications', 'whatsapp', 'api_token', __( 'API Token / Credentials', 'maklaplace' ), $settings['api_token'] ?? '' );
-		$this->nested_input_row( 'notifications', 'whatsapp', 'sender_phone_number', __( 'Sender Phone Number', 'maklaplace' ), $settings['sender_phone_number'] ?? '' );
-		$this->nested_input_row( 'notifications', 'whatsapp', 'test_phone_number', __( 'Test Phone Number', 'maklaplace' ), $settings['test_phone_number'] ?? '' );
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'api_endpoint',
+			__( 'API Endpoint', 'maklaplace' ),
+			$settings['api_endpoint'] ?? '',
+			__( 'Example: https://graph.facebook.com/v22.0/123456789/messages', 'maklaplace' )
+		);
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'api_token',
+			__( 'API Token / Credentials', 'maklaplace' ),
+			$settings['api_token'] ?? '',
+			__( 'Example: EAABsbCS1iHgBAKZC...', 'maklaplace' )
+		);
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'sender_phone_number',
+			__( 'Sender Phone Number', 'maklaplace' ),
+			$settings['sender_phone_number'] ?? '',
+			__( 'Example: +213555123456', 'maklaplace' )
+		);
 		$this->nested_readonly_row( __( 'Callback URL', 'maklaplace' ), $this->get_whatsapp_callback_url() );
 		$this->nested_readonly_row( __( 'Verify Token', 'maklaplace' ), $verify_token );
 		$this->nested_checkbox_row( 'notifications', 'whatsapp', 'sandbox_mode', __( 'Sandbox Mode', 'maklaplace' ), ! empty( $settings['sandbox_mode'] ) );
 		$this->nested_checkbox_row( 'notifications', 'whatsapp', 'enabled', __( 'Enable Provider', 'maklaplace' ), ! empty( $settings['enabled'] ) );
-		echo '<p><button type="submit" class="button" formaction="' . esc_url( admin_url( 'admin-post.php?action=maklaplace_test_whatsapp_connection' ) ) . '" formmethod="post">' . esc_html__( 'Test connection', 'maklaplace' ) . '</button></p>';
+	}
+
+	private function render_whatsapp_test_form() : void {
+		$settings = get_option( self::SETTINGS_OPTION, $this->default_settings() );
+		$settings = wp_parse_args( is_array( $settings ) ? $settings : array(), $this->default_settings() );
+		$notifications = isset( $settings['notifications'] ) && is_array( $settings['notifications'] ) ? $settings['notifications'] : array();
+		$whatsapp = isset( $notifications['whatsapp'] ) && is_array( $notifications['whatsapp'] ) ? $notifications['whatsapp'] : $this->default_settings()['notifications']['whatsapp'];
+		echo '<div class="card">';
+		echo '<h2>' . esc_html__( 'WhatsApp Connection Test', 'maklaplace' ) . '</h2>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'maklaplace_save_settings', 'maklaplace_settings_nonce' );
+		echo '<input type="hidden" name="action" value="maklaplace_test_whatsapp_connection" />';
+		echo '<input type="hidden" name="maklaplace_settings[notifications][whatsapp][provider]" value="' . esc_attr( (string) ( $whatsapp['provider'] ?? 'simulated' ) ) . '" />';
+		echo '<input type="hidden" name="maklaplace_settings[notifications][whatsapp][api_endpoint]" value="' . esc_attr( (string) ( $whatsapp['api_endpoint'] ?? '' ) ) . '" />';
+		echo '<input type="hidden" name="maklaplace_settings[notifications][whatsapp][api_token]" value="' . esc_attr( (string) ( $whatsapp['api_token'] ?? '' ) ) . '" />';
+		echo '<input type="hidden" name="maklaplace_settings[notifications][whatsapp][sender_phone_number]" value="' . esc_attr( (string) ( $whatsapp['sender_phone_number'] ?? '' ) ) . '" />';
+		echo '<input type="hidden" name="maklaplace_settings[notifications][whatsapp][sandbox_mode]" value="' . esc_attr( ! empty( $whatsapp['sandbox_mode'] ) ? '1' : '0' ) . '" />';
+		echo '<input type="hidden" name="maklaplace_settings[notifications][whatsapp][enabled]" value="' . esc_attr( ! empty( $whatsapp['enabled'] ) ? '1' : '0' ) . '" />';
+		echo '<input type="hidden" name="maklaplace_settings[notifications][whatsapp][verify_token]" value="' . esc_attr( (string) ( $whatsapp['verify_token'] ?? '' ) ) . '" />';
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'test_phone_number',
+			__( 'Test Phone Number', 'maklaplace' ),
+			$whatsapp['test_phone_number'] ?? '',
+			__( 'Example: +213555987654', 'maklaplace' )
+		);
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'test_template_name',
+			__( 'Template Name', 'maklaplace' ),
+			'hello_world',
+			__( 'Example: jaspers_market_order_confirmation_v1', 'maklaplace' )
+		);
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'test_template_language',
+			__( 'Template Language', 'maklaplace' ),
+			'en_US',
+			__( 'Example: en_US or fr_FR', 'maklaplace' )
+		);
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'test_template_param_1',
+			__( 'Template Parameter 1', 'maklaplace' ),
+			'',
+			__( 'Example: John Doe', 'maklaplace' )
+		);
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'test_template_param_2',
+			__( 'Template Parameter 2', 'maklaplace' ),
+			'',
+			__( 'Example: 123456', 'maklaplace' )
+		);
+		$this->nested_input_row(
+			'notifications',
+			'whatsapp',
+			'test_template_param_3',
+			__( 'Template Parameter 3', 'maklaplace' ),
+			'',
+			__( 'Example: Aug 2, 2026', 'maklaplace' )
+		);
+		echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Test connection', 'maklaplace' ) . '</button></p>';
+		echo '</form>';
+		echo '</div>';
 	}
 
 	private function nested_select_row( string $section, string $group, string $field, string $label, string $value, array $options ) : void {
-		echo '<p><label><strong>' . esc_html( $label ) . '</strong><br />';
-		echo '<select name="' . esc_attr( self::SETTINGS_OPTION . '[' . $section . '][' . $group . '][' . $field . ']' ) . '" class="regular-text">';
+		$input_id = self::SETTINGS_OPTION . '_' . $section . '_' . $group . '_' . $field;
+		echo '<p><label for="' . esc_attr( $input_id ) . '"><strong>' . esc_html( $label ) . '</strong></label><br />';
+		echo '<select id="' . esc_attr( $input_id ) . '" data-testid="' . esc_attr( $input_id ) . '" name="' . esc_attr( self::SETTINGS_OPTION . '[' . $section . '][' . $group . '][' . $field . ']' ) . '" class="regular-text">';
 		foreach ( $options as $option_value => $option_label ) {
 			echo '<option value="' . esc_attr( (string) $option_value ) . '" ' . selected( $value, (string) $option_value, false ) . '>' . esc_html( $option_label ) . '</option>';
 		}
 		echo '</select></label></p>';
 	}
 
-	private function nested_input_row( string $section, string $group, string $field, string $label, mixed $value ) : void {
+	private function nested_input_row( string $section, string $group, string $field, string $label, mixed $value, string $help = '' ) : void {
 		echo '<p><label><strong>' . esc_html( $label ) . '</strong><br />';
 		echo '<input type="text" name="' . esc_attr( self::SETTINGS_OPTION . '[' . $section . '][' . $group . '][' . $field . ']' ) . '" value="' . esc_attr( (string) $value ) . '" class="regular-text" /></label></p>';
+		if ( '' !== $help ) {
+			echo '<p class="description">' . esc_html( $help ) . '</p>';
+		}
 	}
 
 	private function nested_readonly_row( string $label, string $value ) : void {
 		echo '<p><label><strong>' . esc_html( $label ) . '</strong><br />';
 		echo '<input type="text" readonly="readonly" value="' . esc_attr( $value ) . '" class="regular-text code" /></label></p>';
+	}
+
+	private function nested_help_row( string $text ) : void {
+		echo '<p class="description">' . esc_html( $text ) . '</p>';
 	}
 
 	private function nested_checkbox_row( string $section, string $group, string $field, string $label, bool $checked ) : void {
@@ -473,6 +586,43 @@ final class AdminController {
 
 	private function set_whatsapp_test_notice( array $notice ) : void {
 		set_transient( 'maklaplace_whatsapp_test_notice_' . get_current_user_id(), $notice, 60 );
+	}
+
+	private function build_whatsapp_test_notice_message( string $recipient, array $result ) : string {
+		$success = ! empty( $result['success'] );
+		$response = isset( $result['response'] ) ? $result['response'] : array();
+		$code = is_array( $response ) ? (int) ( $response['code'] ?? 0 ) : 0;
+		$body = is_array( $response ) ? ( $response['body'] ?? null ) : $response;
+		$body_text = '';
+
+		if ( is_array( $body ) ) {
+			$body_text = wp_json_encode( $body );
+		} elseif ( is_scalar( $body ) ) {
+			$body_text = (string) $body;
+		}
+
+		if ( $success ) {
+			return trim(
+				sprintf(
+					'WhatsApp test sent to %1$s. HTTP %2$d. Response: %3$s',
+					$recipient,
+					$code,
+					'' !== $body_text ? $body_text : __( 'No response body.', 'maklaplace' )
+				)
+			);
+		}
+
+		$error = (string) ( $result['error'] ?? __( 'Unknown error.', 'maklaplace' ) );
+
+		return trim(
+			sprintf(
+				'WhatsApp test failed for %1$s. HTTP %2$d. Error: %3$s. Response: %4$s',
+				$recipient,
+				$code,
+				$error,
+				'' !== $body_text ? $body_text : __( 'No response body.', 'maklaplace' )
+			)
+		);
 	}
 
 	private function normalize_verify_token( string $token ) : string {
