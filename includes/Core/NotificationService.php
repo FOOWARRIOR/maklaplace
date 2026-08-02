@@ -10,6 +10,7 @@ namespace MaklaPlace\Core;
 use MaklaPlace\Core\Notifications\ChannelRegistry;
 use MaklaPlace\Core\Notifications\Notification;
 use MaklaPlace\Core\Notifications\NotificationChannelInterface;
+use MaklaPlace\Core\Notifications\NotificationTemplateRegistry;
 use MaklaPlace\Helpers\NotificationKeys;
 
 defined( 'ABSPATH' ) || exit;
@@ -19,7 +20,10 @@ defined( 'ABSPATH' ) || exit;
  */
 final class NotificationService {
 
-	public function __construct( private ChannelRegistry $channels ) {
+	public function __construct(
+		private ChannelRegistry $channels,
+		private ?NotificationTemplateRegistry $templates = null
+	) {
 	}
 
 	/**
@@ -89,6 +93,13 @@ final class NotificationService {
 	 * @return string
 	 */
 	public function format_message( string $event_type, array $context = array() ) : string {
+		if ( $this->templates instanceof NotificationTemplateRegistry ) {
+			$template = $this->templates->find( $event_type );
+			if ( '' !== $template ) {
+				return $template;
+			}
+		}
+
 		$templates = array(
 			'order.created'            => __( 'Your order has been received.', 'maklaplace' ),
 			'order.accepted'           => __( 'Your order has been accepted.', 'maklaplace' ),

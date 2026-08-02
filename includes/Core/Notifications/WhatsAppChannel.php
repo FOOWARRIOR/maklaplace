@@ -1,6 +1,6 @@
 <?php
 /**
- * WhatsApp notification channel placeholder.
+ * WhatsApp notification channel.
  *
  * @package MaklaPlace\Core\Notifications
  */
@@ -11,9 +11,50 @@ defined( 'ABSPATH' ) || exit;
 
 final class WhatsAppChannel implements NotificationChannelInterface {
 
+	public function __construct( private WhatsAppProviderFactory $provider_factory ) {
+	}
+
 	public function send( Notification $notification ) : bool {
-		$this->log_simulated_delivery( $notification );
-		return $this->send_via_provider( $notification );
+		$provider = $this->provider_factory->create();
+		$payload  = array(
+			'recipient_user_id' => $notification->recipient_user_id,
+			'title'             => $notification->title,
+			'message'           => $notification->message,
+			'type'              => $notification->type,
+			'priority'          => $notification->priority,
+			'order_id'          => $notification->order_id,
+			'chef_id'           => $notification->chef_id,
+			'metadata'          => $notification->metadata,
+			'created_at'        => $notification->created_at,
+		);
+
+		if ( ! $provider->is_enabled() ) {
+			error_log( sprintf( 'MaklaPlace WhatsApp provider disabled: %s', $provider->get_provider_name() ) );
+			return false;
+		}
+
+		$result = $provider->send( $payload );
+
+		if ( ! empty( $result['success'] ) ) {
+			error_log(
+				sprintf(
+					'MaklaPlace WhatsApp sent via %s: %s',
+					$provider->get_provider_name(),
+					wp_json_encode( $result['response'] )
+				)
+			);
+			return true;
+		}
+
+		error_log(
+			sprintf(
+				'MaklaPlace WhatsApp failed via %s: %s',
+				$provider->get_provider_name(),
+				(string) ( $result['error'] ?? __( 'Unknown provider error.', 'maklaplace' ) )
+			)
+		);
+
+		return false;
 	}
 
 	public function isEnabled() : bool {
@@ -22,36 +63,5 @@ final class WhatsAppChannel implements NotificationChannelInterface {
 
 	public function getChannelName() : string {
 		return 'whatsapp';
-	}
-
-	/**
-	 * Future provider integration point.
-	 *
-	 * Replace this method body with a real WhatsApp API client call when a
-	 * provider is selected.
-	 *
-	 * @param Notification $notification Notification payload.
-	 * @return bool
-	 */
-	private function send_via_provider( Notification $notification ) : bool {
-		do_action( 'maklaplace_notification_channel_whatsapp_send', $notification );
-		return true;
-	}
-
-	/**
-	 * Log simulated delivery for local development.
-	 *
-	 * @param Notification $notification Notification payload.
-	 * @return void
-	 */
-	private function log_simulated_delivery( Notification $notification ) : void {
-		error_log(
-			sprintf(
-				'MaklaPlace WhatsApp simulated send to user %d: %s | %s',
-				$notification->recipient_user_id,
-				$notification->title,
-				$notification->message
-			)
-		);
 	}
 }

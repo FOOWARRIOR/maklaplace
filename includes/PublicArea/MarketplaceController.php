@@ -97,6 +97,7 @@ final class MarketplaceController {
 	}
 
 	public function register_query_vars( array $vars ) : array {
+		$vars[] = 'maklaplace_webhook';
 		$vars[] = 'maklaplace_chefs';
 		$vars[] = 'maklaplace_favorites';
 		$vars[] = 'maklaplace_checkout';
@@ -112,6 +113,11 @@ final class MarketplaceController {
 	}
 
 	public function maybe_render_clean_routes() : void {
+		if ( 'whatsapp' === (string) get_query_var( 'maklaplace_webhook' ) ) {
+			$this->handle_whatsapp_webhook();
+			exit;
+		}
+
 		$path = trim( (string) parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH ), '/' );
 		if ( 'chefs' === $path ) {
 			$this->render_directory_route();
@@ -176,6 +182,44 @@ final class MarketplaceController {
 			$this->render_single_route( $chef_slug );
 			exit;
 		}
+	}
+
+	private function handle_whatsapp_webhook() : void {
+		$settings = get_option( 'maklaplace_settings', array() );
+		$settings = is_array( $settings ) ? $settings : array();
+		$whatsapp = isset( $settings['notifications']['whatsapp'] ) && is_array( $settings['notifications']['whatsapp'] ) ? $settings['notifications']['whatsapp'] : array();
+		$verify_token = (string) ( $whatsapp['verify_token'] ?? '' );
+
+		if ( 'GET' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) {
+			$mode = sanitize_text_field( (string) wp_unslash( $_GET['hub_mode'] ?? $_GET['hub.mode'] ?? '' ) );
+			$token = sanitize_text_field( (string) wp_unslash( $_GET['hub_verify_token'] ?? $_GET['hub.verify_token'] ?? '' ) );
+			$challenge = sanitize_text_field( (string) wp_unslash( $_GET['hub_challenge'] ?? $_GET['hub.challenge'] ?? '' ) );
+
+			if ( 'subscribe' === $mode && '' !== $verify_token && hash_equals( $verify_token, $token ) ) {
+				status_header( 200 );
+				header( 'Content-Type: text/plain; charset=' . get_bloginfo( 'charset' ) );
+				echo $challenge;
+				exit;
+			}
+
+			status_header( 403 );
+			header( 'Content-Type: text/plain; charset=' . get_bloginfo( 'charset' ) );
+			echo esc_html__( 'Verification failed.', 'maklaplace' );
+			exit;
+		}
+
+		$raw_body = file_get_contents( 'php://input' );
+		error_log(
+			sprintf(
+				'MaklaPlace WhatsApp webhook received: %s',
+				is_string( $raw_body ) ? $raw_body : ''
+			)
+		);
+
+		status_header( 200 );
+		header( 'Content-Type: application/json; charset=' . get_bloginfo( 'charset' ) );
+		echo wp_json_encode( array( 'success' => true ) );
+		exit;
 	}
 
 	public function filter_document_title( array $parts ) : array {
