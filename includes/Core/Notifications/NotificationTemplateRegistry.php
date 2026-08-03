@@ -16,41 +16,41 @@ final class NotificationTemplateRegistry {
 	 */
 	private array $templates = array(
 		'customer' => array(
-			'order.received'   => 'Your order has been received.',
-			'order.created'    => 'Your order has been received. Order #{order_id} is now pending.',
-			'order.accepted'   => 'Your order has been accepted.',
-			'order.preparing'  => 'Your order is being prepared.',
-			'order.ready'       => 'Your order is ready.',
-			'order.completed'  => 'Your order has been completed.',
-			'order.cancelled'  => 'Your order has been cancelled.',
+			'order_received'   => 'Your order has been received.',
+			'order_created'    => 'Order #{{1}} is in the kitchen, {{2}}.',
+			'order_accepted'   => 'Great news, {{2}}! Your order #{{1}} has been accepted.',
+			'order_preparing'  => 'Your order #{{1}} is now being prepared.',
+			'order_ready'      => 'Good news, {{2}}! Order #{{1}} is ready.',
+			'order_completed'  => 'Your order #{{1}} has been completed. Enjoy your meal, {{2}}.',
+			'order_cancelled'  => 'Your order #{{1}} has been cancelled, {{2}}.',
 		),
 		'chef' => array(
-			'order.created'     => 'New order #{order_id} from {customer_name} for {order_total} has been created.',
-			'order.accepted'    => 'Order #{order_id} from {customer_name} has been accepted.',
-			'order.preparing'   => 'You started preparing order #{order_id} for {customer_name}.',
-			'order.ready'       => 'Order #{order_id} for {customer_name} is ready for pickup.',
-			'order.completed'   => 'Order #{order_id} for {customer_name} has been completed.',
-			'new_order'          => 'You have received a new order.',
-			'order.cancelled'   => 'An order has been cancelled.',
-			'wallet.commission_added' => 'A commission has been added to your wallet.',
-			'wallet.ready'       => 'Your wallet is ready for collection.',
-			'wallet.deduction_recorded' => 'A wallet deduction has been recorded.',
+			'chef_order_created'          => 'New order #{{1}} from {{2}} for {{3}} is ready for you.',
+			'chef_order_accepted'         => 'You accepted order #{{1}} from {{2}}.',
+			'chef_order_preparing'        => 'Order #{{1}} for {{2}} is now in progress.',
+			'chef_order_ready'            => 'Order #{{1}} for {{2}} is ready for pickup.',
+			'chef_order_completed'        => 'Order #{{1}} for {{2}} has been completed successfully.',
+			'chef_new_order'              => 'You have received a new order.',
+			'chef_order_cancelled'        => 'Order #{{1}} was cancelled.',
+			'chef_wallet_commission_added' => 'Nice work, {{1}}. A commission was added to your wallet.',
+			'chef_wallet_ready'           => 'Your wallet is ready for collection, {{1}}.',
+			'chef_wallet_deduction_recorded' => 'A wallet deduction has been recorded.',
 		),
 		'administrator' => array(
-			'order.created'      => 'A new order #{order_id} has been created for {chef_name}.',
-			'order.accepted'     => 'Order #{order_id} has been accepted by the chef.',
-			'order.preparing'    => 'Order #{order_id} is now being prepared.',
-			'order.ready'        => 'Order #{order_id} is ready for collection or dispatch.',
-			'order.completed'    => 'Order #{order_id} has been completed.',
-			'order.cancelled'    => 'Order #{order_id} has been cancelled.',
-			'wallet.commission_added' => 'A commission was added to a wallet.',
-			'chef.registered'    => 'A new chef has registered.',
-			'wallet.threshold_reached' => 'A wallet threshold has been reached.',
-			'wallet.threshold'   => 'A wallet threshold has been reached.',
-			'wallet.ready'       => 'A wallet is ready for collection.',
-			'wallet.deduction_recorded' => 'A wallet deduction has been recorded.',
-			'system.alert'       => 'A system alert requires attention.',
-			'delivery'          => 'A delivery update is available.',
+			'admin_order_created'          => 'A new order #{{1}} has been created for {{2}}.',
+			'admin_order_accepted'         => 'Order #{{1}} has been accepted by the chef.',
+			'admin_order_preparing'        => 'Order #{{1}} is now being prepared.',
+			'admin_order_ready'            => 'Order #{{1}} is ready for collection or dispatch.',
+			'admin_order_completed'        => 'Order #{{1}} has been completed.',
+			'admin_order_cancelled'        => 'Order #{{1}} has been cancelled.',
+			'admin_wallet_commission_added' => 'A commission was added to a wallet.',
+			'admin_chef_registered'        => 'A new chef has registered.',
+			'admin_wallet_threshold_reached' => 'A wallet threshold has been reached.',
+			'admin_wallet_threshold'       => 'A wallet threshold has been reached.',
+			'admin_wallet_ready'           => 'A wallet is ready for collection.',
+			'admin_wallet_deduction_recorded' => 'A wallet deduction has been recorded.',
+			'admin_system_alert'           => 'A system alert requires attention.',
+			'admin_delivery'               => 'A delivery update is available.',
 		),
 	);
 
@@ -62,7 +62,10 @@ final class NotificationTemplateRegistry {
 	 * @return string
 	 */
 	public function get( string $audience, string $template_key ) : string {
-		return $this->templates[ sanitize_key( $audience ) ][ sanitize_key( $template_key ) ] ?? '';
+		$audience      = $this->normalize_key( $audience );
+		$template_key  = $this->normalize_key( $template_key );
+
+		return $this->templates[ $audience ][ $template_key ] ?? '';
 	}
 
 	/**
@@ -72,7 +75,7 @@ final class NotificationTemplateRegistry {
 	 * @return string
 	 */
 	public function find( string $template_key ) : string {
-		$template_key = sanitize_key( $template_key );
+		$template_key = $this->normalize_key( $template_key );
 		foreach ( $this->templates as $audience_templates ) {
 			if ( isset( $audience_templates[ $template_key ] ) ) {
 				return $audience_templates[ $template_key ];
@@ -87,7 +90,7 @@ final class NotificationTemplateRegistry {
 	 *
 	 * @param string $audience Audience name.
 	 * @param string $template_key Template key.
-	 * @param array<string, string|int|float> $replacements Placeholder replacements.
+	 * @param array<int|string, string|int|float> $replacements Placeholder replacements.
 	 * @return string
 	 */
 	public function render( string $audience, string $template_key, array $replacements = array() ) : string {
@@ -100,11 +103,24 @@ final class NotificationTemplateRegistry {
 			return '';
 		}
 
-		foreach ( $replacements as $placeholder => $value ) {
-			$template = str_replace( '{' . sanitize_key( (string) $placeholder ) . '}', (string) $value, $template );
+		$values = array_values( $replacements );
+		foreach ( $values as $index => $value ) {
+			$template = str_replace( '{{' . (string) ( $index + 1 ) . '}}', (string) $value, $template );
 		}
 
 		return $template;
+	}
+
+	/**
+	 * Normalize a template or audience key.
+	 *
+	 * @param string $key Key to normalize.
+	 * @return string
+	 */
+	private function normalize_key( string $key ) : string {
+		$key = strtolower( $key );
+		$key = str_replace( array( '.', '-' ), '_', $key );
+		return sanitize_key( $key );
 	}
 
 	/**

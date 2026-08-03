@@ -100,32 +100,26 @@ final class NotificationService {
 			}
 		}
 
+		$event_type = $this->normalize_event_type( $event_type );
 		$templates = array(
-			'order.created'            => __( 'Your order has been received.', 'maklaplace' ),
-			'order.accepted'           => __( 'Your order has been accepted.', 'maklaplace' ),
-			'order.preparing'          => __( 'Your order is being prepared.', 'maklaplace' ),
-			'order.ready'              => __( 'Your order is ready.', 'maklaplace' ),
-			'order.completed'          => __( 'Your order has been completed.', 'maklaplace' ),
-			'order.cancelled'          => __( 'Your order has been cancelled.', 'maklaplace' ),
 			'order_created'            => __( 'Your order has been received.', 'maklaplace' ),
-			'order_confirmed'          => __( 'Your order has been confirmed.', 'maklaplace' ),
-			'order_status_changed'     => __( 'Your order status has been updated.', 'maklaplace' ),
+			'order_accepted'           => __( 'Your order has been accepted.', 'maklaplace' ),
+			'order_preparing'          => __( 'Your order is being prepared.', 'maklaplace' ),
+			'order_ready'              => __( 'Your order is ready.', 'maklaplace' ),
 			'order_completed'          => __( 'Your order has been completed.', 'maklaplace' ),
 			'order_cancelled'          => __( 'Your order has been cancelled.', 'maklaplace' ),
-			'wallet.commission_added'  => __( 'A commission has been added to your wallet.', 'maklaplace' ),
-			'wallet.threshold_reached' => __( 'Your wallet has reached the collection threshold.', 'maklaplace' ),
-			'wallet.deduction_recorded' => __( 'A wallet deduction has been recorded.', 'maklaplace' ),
-			'commission_added'         => __( 'A commission has been added to your wallet.', 'maklaplace' ),
+			'order_confirmed'          => __( 'Your order has been confirmed.', 'maklaplace' ),
+			'order_status_changed'     => __( 'Your order status has been updated.', 'maklaplace' ),
+			'wallet_commission_added'  => __( 'A commission has been added to your wallet.', 'maklaplace' ),
 			'wallet_threshold_reached' => __( 'Your wallet has reached the collection threshold.', 'maklaplace' ),
+			'wallet_deduction_recorded' => __( 'A wallet deduction has been recorded.', 'maklaplace' ),
+			'commission_added'         => __( 'A commission has been added to your wallet.', 'maklaplace' ),
 			'wallet_status_changed'    => __( 'Your wallet status has changed.', 'maklaplace' ),
-			'chef.registered'          => __( 'Your chef profile has been registered.', 'maklaplace' ),
-			'chef.approved'            => __( 'Your chef profile has been approved.', 'maklaplace' ),
-			'chef.rejected'            => __( 'Your chef profile has been rejected.', 'maklaplace' ),
-			'chef.suspended'           => __( 'Your chef profile has been suspended.', 'maklaplace' ),
+			'chef_registered'          => __( 'Your chef profile has been registered.', 'maklaplace' ),
 			'chef_approved'            => __( 'Your chef profile has been approved.', 'maklaplace' ),
 			'chef_rejected'            => __( 'Your chef profile has been rejected.', 'maklaplace' ),
 			'chef_suspended'           => __( 'Your chef profile has been suspended.', 'maklaplace' ),
-			'customer.registered'      => __( 'Your customer account has been created.', 'maklaplace' ),
+			'customer_registered'      => __( 'Your customer account has been created.', 'maklaplace' ),
 		);
 
 		return $templates[ $event_type ] ?? __( 'You have a new notification.', 'maklaplace' );
@@ -271,6 +265,19 @@ final class NotificationService {
 	 */
 	private function format_title( string $event_type ) : string {
 		return ucwords( str_replace( array( '_', '-' ), ' ', sanitize_key( $event_type ) ) );
+	}
+
+	/**
+	 * Normalize event type for template lookup.
+	 *
+	 * @param string $event_type Event type.
+	 * @return string
+	 */
+	private function normalize_event_type( string $event_type ) : string {
+		$event_type = strtolower( $event_type );
+		$event_type = str_replace( array( '.', '-' ), '_', $event_type );
+
+		return sanitize_key( $event_type );
 	}
 
 	/**
