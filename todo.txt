@@ -1,0 +1,1 @@
+As a chef when I login I should be auto. redirected to the dashboard
